@@ -1,0 +1,106 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { api } from '../api/client.js';
+
+export default function Dashboard() {
+  const [articles, setArticles] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([api.articles.list(), api.invoices.list(), api.settings.get()])
+      .then(([a, i, s]) => { setArticles(a); setInvoices(i); setSettings(s); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
+
+  const totalPieces = articles.reduce((sum, a) => sum + a.quantity, 0);
+  const totalWeight = articles.reduce((sum, a) => sum + a.total_net_weight, 0);
+  const goldValue = articles
+    .filter((a) => a.metal === 'Gold')
+    .reduce((sum, a) => sum + a.total_net_weight * (settings?.gold_rate_per_gram || 0), 0);
+  const silverValue = articles
+    .filter((a) => a.metal === 'Silver')
+    .reduce((sum, a) => sum + a.total_net_weight * (settings?.silver_rate_per_gram || 0), 0);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const todaysInvoices = invoices.filter((inv) => inv.invoice_date?.slice(0, 10) === today && inv.status !== 'cancelled');
+  const todaysSales = todaysInvoices.reduce((sum, inv) => sum + inv.grand_total, 0);
+
+  const lowStock = articles.filter((a) => a.quantity > 0 && a.quantity <= 2);
+  const recentInvoices = invoices.slice(0, 6);
+
+  return (
+    <div>
+      <div className="page-header"><h2>Dashboard</h2></div>
+
+      <div className="grid cols-4">
+        <div className="card stat">
+          <div className="value">{articles.length}</div>
+          <div className="label">Article designs</div>
+        </div>
+        <div className="card stat">
+          <div className="value">{totalPieces}</div>
+          <div className="label">Pieces in stock ({totalWeight.toFixed(2)} g)</div>
+        </div>
+        <div className="card stat">
+          <div className="value">₹{(goldValue + silverValue).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+          <div className="label">Est. stock value (at current rates)</div>
+        </div>
+        <div className="card stat">
+          <div className="value">₹{todaysSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+          <div className="label">Today's sales ({todaysInvoices.length} bills)</div>
+        </div>
+      </div>
+
+      <div className="grid cols-2">
+        <div className="card">
+          <h3>Low stock (≤ 2 pieces)</h3>
+          {lowStock.length === 0 ? (
+            <p className="hint">No articles are running low.</p>
+          ) : (
+            <table>
+              <thead><tr><th>Article</th><th>Qty</th></tr></thead>
+              <tbody>
+                {lowStock.map((a) => (
+                  <tr key={a.id}>
+                    <td><Link to={`/inventory/${a.id}`}>{a.name}</Link></td>
+                    <td><span className="badge low">{a.quantity} left</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="card">
+          <h3>Recent invoices</h3>
+          {recentInvoices.length === 0 ? (
+            <p className="hint">No sales yet. Create one from "New Sale".</p>
+          ) : (
+            <table>
+              <thead><tr><th>No.</th><th>Customer</th><th>Total</th></tr></thead>
+              <tbody>
+                {recentInvoices.map((inv) => (
+                  <tr key={inv.id}>
+                    <td><Link to={`/invoices/${inv.id}`}>{inv.invoice_number}</Link></td>
+                    <td>{inv.customer_name || '—'}</td>
+                    <td>₹{inv.grand_total.toLocaleString('en-IN')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {(!settings?.gold_rate_per_gram) && (
+        <div className="card" style={{ borderColor: '#e0b24a' }}>
+          <strong>Set today's gold rate</strong> in <Link to="/settings">Settings</Link> so billing can price items automatically.
+        </div>
+      )}
+    </div>
+  );
+}

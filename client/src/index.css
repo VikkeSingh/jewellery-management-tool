@@ -1,0 +1,214 @@
+:root {
+  --gold: #b8860b;
+  --gold-light: #e8c874;
+  --ink: #241f14;
+  --paper: #fffdf8;
+  --panel: #ffffff;
+  --border: #e7ddc7;
+  --muted: #7a7261;
+  --danger: #b3261e;
+  --success: #1e6b3f;
+  --radius: 10px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #f6f1e4;
+  color: var(--ink);
+}
+
+#root { min-height: 100vh; }
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #241f14 0%, #3a2f18 100%);
+  color: #f3e9c9;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar h1 {
+  font-size: 18px;
+  color: var(--gold-light);
+  margin: 0 6px 20px;
+  font-weight: 700;
+}
+
+.sidebar a {
+  color: #f3e9c9;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.sidebar a:hover { background: rgba(255,255,255,0.08); opacity: 1; }
+.sidebar a.active { background: var(--gold); color: #241f14; opacity: 1; font-weight: 600; }
+
+.main {
+  flex: 1;
+  padding: 28px 32px;
+  max-width: 1200px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-header h2 { margin: 0; font-size: 22px; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+
+.card h3 { margin-top: 0; }
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+.grid.cols-2 { grid-template-columns: 1fr 1fr; }
+.grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 900px) {
+  .grid.cols-2, .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr; }
+  .app-shell { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
+}
+
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+  color: var(--ink);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--gold-light);
+  border-color: var(--gold);
+}
+
+.field { margin-bottom: 12px; }
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--gold);
+  color: #241f14;
+}
+button:hover { filter: brightness(1.05); }
+button.secondary { background: #efe6cc; color: var(--ink); }
+button.danger { background: #f6d9d6; color: var(--danger); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.small { padding: 5px 10px; font-size: 12px; }
+button.link { background: none; color: var(--gold); padding: 0; text-decoration: underline; font-weight: 500; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+tr:hover td { background: #faf6ea; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge.in_stock { background: #dff2e4; color: var(--success); }
+.badge.sold { background: #eee; color: var(--muted); }
+.badge.low { background: #fbe3d0; color: #a2531b; }
+
+.stat {
+  text-align: left;
+}
+.stat .value { font-size: 26px; font-weight: 700; color: var(--ink); }
+.stat .label { font-size: 13px; color: var(--muted); }
+
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px 0;
+}
+
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar input, .toolbar select { width: auto; min-width: 180px; }
+.spacer { flex: 1; }
+
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(20,15,5,0.45);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 16px; overflow-y: auto; z-index: 50;
+}
+.modal {
+  background: var(--panel); border-radius: var(--radius); padding: 22px 24px;
+  width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+}
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+.error-text { color: var(--danger); font-size: 13px; margin-top: 6px; }
+.hint { color: var(--muted); font-size: 12px; margin-top: 3px; }
+
+/* --- Billing cart --- */
+.cart-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.cart-row .cart-meta { font-size: 12px; color: var(--muted); }
+.totals-box { margin-left: auto; max-width: 320px; }
+.totals-box .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+.totals-box .row.grand { font-size: 18px; font-weight: 700; border-top: 1px solid var(--border); margin-top: 6px; padding-top: 10px; }
+
+/* --- Printable invoice --- */
+.invoice-sheet {
+  background: #fff;
+  padding: 30px;
+  max-width: 800px;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.invoice-sheet h2 { margin: 0; }
+.invoice-head { display: flex; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 14px; }
+.invoice-head .shop-name { font-size: 20px; font-weight: 700; }
+.invoice-parties { display: flex; justify-content: space-between; margin-bottom: 16px; gap: 20px; }
+.invoice-parties .box { flex: 1; font-size: 13px; }
+.invoice-parties .box strong { display: block; margin-bottom: 4px; }
+.invoice-sheet table { font-size: 12.5px; }
+.invoice-sheet .totals-box { margin-top: 14px; }
+.invoice-footer-note { margin-top: 22px; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 10px; }
+.print-actions { max-width: 800px; margin: 0 auto 14px; display: flex; gap: 10px; justify-content: flex-end; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .invoice-sheet { border: none; padding: 0; }
+  .main { padding: 0; }
+  .sidebar { display: none; }
+}

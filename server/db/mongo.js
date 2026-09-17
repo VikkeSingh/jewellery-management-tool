@@ -1,10 +1,5 @@
 import { MongoClient, ObjectId } from 'mongodb';
 
-const uri = process.env.MONGODB_URI;
-if (!uri) {
-  throw new Error('MONGODB_URI environment variable is not set');
-}
-
 // Cache the client/connection across invocations. On Vercel, the module
 // scope can be reused between requests in the same warm serverless
 // instance, so we avoid reconnecting every time. In local dev this also
@@ -14,6 +9,10 @@ let cachedDb = globalThis.__mongoDb;
 
 async function getDb() {
   if (cachedDb) return cachedDb;
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error('MONGODB_URI environment variable is not set');
+  }
   const client = cachedClient || new MongoClient(uri, { maxPoolSize: 10 });
   if (!cachedClient) {
     await client.connect();

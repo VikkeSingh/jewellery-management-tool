@@ -4,10 +4,23 @@ import { api } from '../api/client.js';
 
 function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 
+const MAKING_MODES = [
+  { value: 'per_gram', label: '₹/gram' },
+  { value: 'percentage', label: '%' },
+  { value: 'fixed', label: '₹ fixed' },
+];
+
+function computeMakingCharge(item, metalValue) {
+  const value = Number(item.making_charge_input || 0);
+  if (item.making_charge_mode === 'percentage') return round2((value / 100) * metalValue);
+  if (item.making_charge_mode === 'per_gram') return round2(value * item.piece.net_weight);
+  return round2(value);
+}
+
 function computeLine(item, settings, isInterstate) {
   const rate = Number(item.metal_rate_per_gram);
   const metalValue = round2(rate * item.piece.net_weight);
-  const makingCharge = Number(item.making_charge);
+  const makingCharge = computeMakingCharge(item, metalValue);
   const stoneCharge = Number(item.stone_charge);
   const taxableValue = round2(metalValue + makingCharge + stoneCharge);
   const gstRate = Number(item.gst_rate);
@@ -15,7 +28,7 @@ function computeLine(item, settings, isInterstate) {
   if (isInterstate) igst = round2(taxableValue * (gstRate / 100));
   else { cgst = round2(taxableValue * (gstRate / 200)); sgst = round2(taxableValue * (gstRate / 200)); }
   const lineTotal = round2(taxableValue + cgst + sgst + igst);
-  return { metalValue, taxableValue, cgst, sgst, igst, lineTotal };
+  return { metalValue, makingCharge, taxableValue, cgst, sgst, igst, lineTotal };
 }
 
 export default function NewSale() {
@@ -59,16 +72,13 @@ export default function NewSale() {
     const piece = availablePieces.find((p) => String(p.id) === String(selectedPieceId));
     if (!piece || !selectedArticle) return;
     const rate = selectedArticle.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram;
-    let makingCharge = 0;
-    if (selectedArticle.making_charge_type === 'per_gram') makingCharge = round2(selectedArticle.making_charge_value * piece.net_weight);
-    else if (selectedArticle.making_charge_type === 'percentage') makingCharge = round2((selectedArticle.making_charge_value / 100) * rate * piece.net_weight);
-    else makingCharge = selectedArticle.making_charge_value;
 
     setCart([...cart, {
       key: `${piece.id}-${Date.now()}`,
       piece, article: selectedArticle,
       metal_rate_per_gram: rate || 0,
-      making_charge: makingCharge,
+      making_charge_mode: selectedArticle.making_charge_type || 'per_gram',
+      making_charge_input: selectedArticle.making_charge_value || 0,
       stone_charge: piece.stone_charge || 0,
       gst_rate: selectedArticle.gst_rate,
     }]);
@@ -109,13 +119,16 @@ export default function NewSale() {
         payment_mode: paymentMode,
         discount: Number(discount || 0),
         old_gold_exchange_value: Number(oldGold || 0),
-        items: cart.map((c) => ({
-          piece_id: c.piece.id,
-          metal_rate_per_gram: Number(c.metal_rate_per_gram),
-          making_charge: Number(c.making_charge),
-          stone_charge: Number(c.stone_charge),
-          gst_rate_override: Number(c.gst_rate),
-        })),
+        items: cart.map((c) => {
+          const line = computeLine(c, settings, isInterstate);
+          return {
+            piece_id: c.piece.id,
+            metal_rate_per_gram: Number(c.metal_rate_per_gram),
+            making_charge: line.makingCharge,
+            stone_charge: Number(c.stone_charge),
+            gst_rate_override: Number(c.gst_rate),
+          };
+        }),
       });
       navigate(`/invoices/${invoice.id}`);
     } catch (err) {
@@ -219,7 +232,15 @@ export default function NewSale() {
                       <td>{item.article.name}<div className="cart-meta">{item.piece.tag_number || `#${item.piece.id}`}</div></td>
                       <td>{item.piece.net_weight.toFixed(3)}</td>
                       <td><input type="number" step="0.01" style={{ width: 90 }} value={item.metal_rate_per_gram} onChange={(e) => updateCartItem(item.key, 'metal_rate_per_gram', e.target.value)} /></td>
-                      <td><input type="number" step="0.01" style={{ width: 90 }} value={item.making_charge} onChange={(e) => updateCartItem(item.key, 'making_charge', e.target.value)} /></td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <input type="number" step="0.01" style={{ width: 60 }} value={item.making_charge_input} onChange={(e) => updateCartItem(item.key, 'making_charge_input', e.target.value)} />
+                          <select style={{ width: 78 }} value={item.making_charge_mode} onChange={(e) => updateCartItem(item.key, 'making_charge_mode', e.target.value)}>
+                            {MAKING_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="cart-meta">= ₹{line.makingCharge.toFixed(2)}</div>
+                      </td>
                       <td><input type="number" step="0.01" style={{ width: 90 }} value={item.stone_charge} onChange={(e) => updateCartItem(item.key, 'stone_charge', e.target.value)} /></td>
                       <td><input type="number" step="0.01" style={{ width: 70 }} value={item.gst_rate} onChange={(e) => updateCartItem(item.key, 'gst_rate', e.target.value)} /></td>
                       <td>₹{line.taxableValue.toFixed(2)}</td>

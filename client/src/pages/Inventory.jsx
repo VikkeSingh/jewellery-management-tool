@@ -4,15 +4,10 @@ import { api } from '../api/client.js';
 import Modal from '../components/Modal.jsx';
 
 const METALS = ['Gold', 'Silver', 'Platinum', 'Diamond'];
-const MAKING_TYPES = [
-  { value: 'per_gram', label: 'Per gram' },
-  { value: 'percentage', label: '% of metal value' },
-  { value: 'fixed', label: 'Fixed amount' },
-];
 
 const emptyForm = {
   name: '', category: '', metal: 'Gold', purity: '22K', hsn_code: '7113',
-  making_charge_type: 'per_gram', making_charge_value: 0, gst_rate: 3, sku: '', notes: '',
+  gst_rate: 3, sku: '', notes: '',
 };
 
 export default function Inventory() {
@@ -127,21 +122,12 @@ export default function Inventory() {
                 <label>GST rate (%)</label>
                 <input type="number" step="0.01" value={form.gst_rate} onChange={(e) => setForm({ ...form, gst_rate: Number(e.target.value) })} />
               </div>
-              <div className="field">
-                <label>Making charge type</label>
-                <select value={form.making_charge_type} onChange={(e) => setForm({ ...form, making_charge_type: e.target.value })}>
-                  {MAKING_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label>Making charge value</label>
-                <input type="number" step="0.01" value={form.making_charge_value} onChange={(e) => setForm({ ...form, making_charge_value: Number(e.target.value) })} />
-              </div>
             </div>
             <div className="field">
               <label>Notes</label>
               <textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
+            <p className="hint">Making charge is set per piece when it's added to a bill in New Sale, not here.</p>
             {error && <div className="error-text">{error}</div>}
             <div className="modal-actions">
               <button type="button" className="secondary" onClick={() => setShowForm(false)}>Cancel</button>

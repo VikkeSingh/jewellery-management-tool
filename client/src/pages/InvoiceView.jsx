@@ -73,7 +73,22 @@ export default function InvoiceView() {
           )}
         </div>
 
-        <table>
+        <table className="invoice-items-table">
+          <colgroup>
+            <col style={{ width: '3%' }} />
+            <col style={{ width: isEstimate ? '20%' : '14%' }} />
+            {!isEstimate && <col style={{ width: '6%' }} />}
+            <col style={{ width: isEstimate ? '7%' : '6%' }} />
+            <col style={{ width: isEstimate ? '8%' : '7%' }} />
+            <col style={{ width: isEstimate ? '8%' : '7%' }} />
+            <col style={{ width: isEstimate ? '9%' : '8%' }} />
+            <col style={{ width: isEstimate ? '10%' : '9%' }} />
+            <col style={{ width: isEstimate ? '9%' : '8%' }} />
+            <col style={{ width: isEstimate ? '8%' : '7%' }} />
+            <col style={{ width: isEstimate ? '10%' : '9%' }} />
+            {!isEstimate && <col style={{ width: '5%' }} />}
+            <col style={{ width: isEstimate ? '8%' : '11%' }} />
+          </colgroup>
           <thead>
             <tr>
               <th>#</th><th>Description</th>

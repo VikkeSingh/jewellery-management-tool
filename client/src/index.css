@@ -200,7 +200,8 @@ tr:hover td { background: #faf6ea; }
 .invoice-parties { display: flex; justify-content: space-between; margin-bottom: 16px; gap: 20px; }
 .invoice-parties .box { flex: 1; font-size: 13px; }
 .invoice-parties .box strong { display: block; margin-bottom: 4px; }
-.invoice-sheet table { font-size: 12.5px; }
+.invoice-items-table { table-layout: fixed; width: 100%; font-size: 10.5px; }
+.invoice-items-table th, .invoice-items-table td { padding: 5px 3px; overflow-wrap: break-word; }
 .invoice-sheet .totals-box { margin-top: 14px; }
 .invoice-footer-note { margin-top: 22px; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 10px; }
 .print-actions { max-width: 800px; margin: 0 auto 14px; display: flex; gap: 10px; justify-content: flex-end; }
@@ -208,7 +209,7 @@ tr:hover td { background: #faf6ea; }
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; }
-  .invoice-sheet { border: none; padding: 0; }
+  .invoice-sheet { border: none; padding: 0; max-width: 100%; }
   .main { padding: 0; }
   .sidebar { display: none; }
 }

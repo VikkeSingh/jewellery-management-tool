@@ -60,11 +60,14 @@ router.post('/', async (req, res) => {
     making_charge_type: b.making_charge_type || 'per_gram',
     making_charge_value: Number(b.making_charge_value ?? 0),
     gst_rate: Number(b.gst_rate ?? 3),
-    sku: b.sku || null,
     notes: b.notes || '',
     created_at: new Date().toISOString(),
     is_active: true,
   };
+  // Only store sku when actually provided: a sparse unique index still
+  // indexes an explicit null, so leaving the key out entirely (rather than
+  // null) is what lets multiple articles have no SKU.
+  if (b.sku) doc.sku = b.sku;
   try {
     const result = await db.collection('articles').insertOne(doc);
     res.status(201).json(withId({ _id: result.insertedId, ...doc }));
@@ -79,11 +82,19 @@ router.put('/:id', async (req, res) => {
   const db = await getDb();
   const existing = await db.collection('articles').findOne({ _id: toObjectId(req.params.id) });
   if (!existing) return res.status(404).json({ error: 'Article not found' });
-  const fields = ['name', 'category', 'metal', 'purity', 'hsn_code', 'making_charge_type', 'making_charge_value', 'gst_rate', 'sku', 'notes'];
+  const fields = ['name', 'category', 'metal', 'purity', 'hsn_code', 'making_charge_type', 'making_charge_value', 'gst_rate', 'notes'];
   const update = {};
   const b = req.body || {};
   for (const f of fields) if (b[f] !== undefined) update[f] = b[f];
-  await db.collection('articles').updateOne({ _id: toObjectId(req.params.id) }, { $set: update });
+  const unset = {};
+  if (b.sku !== undefined) {
+    if (b.sku) update.sku = b.sku;
+    else unset.sku = '';
+  }
+  const ops = {};
+  if (Object.keys(update).length) ops.$set = update;
+  if (Object.keys(unset).length) ops.$unset = unset;
+  await db.collection('articles').updateOne({ _id: toObjectId(req.params.id) }, ops);
   const updated = await db.collection('articles').findOne({ _id: toObjectId(req.params.id) });
   res.json(withId(updated));
 });

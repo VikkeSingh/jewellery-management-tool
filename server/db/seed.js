@@ -21,12 +21,21 @@ export async function ensureDb() {
         gstin: process.env.SEED_SHOP_GSTIN || '',
         invoice_prefix: process.env.SEED_INVOICE_PREFIX || 'INV',
         next_invoice_no: 1,
+        estimate_prefix: process.env.SEED_ESTIMATE_PREFIX || 'EST',
+        next_estimate_no: 1,
         invoice_footer: process.env.SEED_INVOICE_FOOTER || 'Thank you for your business!',
         gold_rate_per_gram: Number(process.env.SEED_GOLD_RATE || 0),
         silver_rate_per_gram: Number(process.env.SEED_SILVER_RATE || 0),
       },
     },
     { upsert: true }
+  );
+
+  // Backfill estimate numbering fields for a settings doc that already
+  // existed before the Estimate document type was introduced.
+  await db.collection('settings').updateOne(
+    { _id: SETTINGS_ID, estimate_prefix: { $exists: false } },
+    { $set: { estimate_prefix: 'EST', next_estimate_no: 1 } }
   );
 
   await Promise.all([

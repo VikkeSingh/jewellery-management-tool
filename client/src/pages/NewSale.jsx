@@ -17,22 +17,25 @@ function computeMakingCharge(item, metalValue) {
   return round2(value);
 }
 
-function computeLine(item, settings, isInterstate) {
+function computeLine(item, settings, isInterstate, documentType) {
   const rate = Number(item.metal_rate_per_gram);
   const metalValue = round2(rate * item.piece.net_weight);
   const makingCharge = computeMakingCharge(item, metalValue);
   const stoneCharge = Number(item.stone_charge);
   const taxableValue = round2(metalValue + makingCharge + stoneCharge);
-  const gstRate = Number(item.gst_rate);
+  const gstRate = documentType === 'estimate' ? 0 : Number(item.gst_rate);
   let cgst = 0, sgst = 0, igst = 0;
-  if (isInterstate) igst = round2(taxableValue * (gstRate / 100));
-  else { cgst = round2(taxableValue * (gstRate / 200)); sgst = round2(taxableValue * (gstRate / 200)); }
+  if (documentType === 'tax_invoice') {
+    if (isInterstate) igst = round2(taxableValue * (gstRate / 100));
+    else { cgst = round2(taxableValue * (gstRate / 200)); sgst = round2(taxableValue * (gstRate / 200)); }
+  }
   const lineTotal = round2(taxableValue + cgst + sgst + igst);
   return { metalValue, makingCharge, taxableValue, cgst, sgst, igst, lineTotal };
 }
 
 export default function NewSale() {
   const navigate = useNavigate();
+  const [documentType, setDocumentType] = useState('tax_invoice');
   const [settings, setSettings] = useState(null);
   const [articles, setArticles] = useState([]);
   const [selectedArticleId, setSelectedArticleId] = useState('');
@@ -94,19 +97,19 @@ export default function NewSale() {
     setCart(cart.filter((c) => c.key !== key));
   }
 
-  const isInterstate = !!customer.state && !!settings?.state && customer.state.trim().toLowerCase() !== settings.state.trim().toLowerCase();
+  const isInterstate = documentType === 'tax_invoice' && !!customer.state && !!settings?.state && customer.state.trim().toLowerCase() !== settings.state.trim().toLowerCase();
 
   const totals = useMemo(() => {
     if (!settings) return null;
     let taxable = 0, cgst = 0, sgst = 0, igst = 0;
     for (const item of cart) {
-      const line = computeLine(item, settings, isInterstate);
+      const line = computeLine(item, settings, isInterstate, documentType);
       taxable += line.taxableValue; cgst += line.cgst; sgst += line.sgst; igst += line.igst;
     }
     const preRound = round2(taxable + cgst + sgst + igst - Number(discount || 0) - Number(oldGold || 0));
     const grand = Math.round(preRound);
     return { taxable: round2(taxable), cgst: round2(cgst), sgst: round2(sgst), igst: round2(igst), grand, roundOff: round2(grand - preRound) };
-  }, [cart, settings, isInterstate, discount, oldGold]);
+  }, [cart, settings, isInterstate, documentType, discount, oldGold]);
 
   async function submitSale() {
     setError('');
@@ -115,12 +118,13 @@ export default function NewSale() {
     setSubmitting(true);
     try {
       const invoice = await api.invoices.create({
+        document_type: documentType,
         customer,
         payment_mode: paymentMode,
         discount: Number(discount || 0),
         old_gold_exchange_value: Number(oldGold || 0),
         items: cart.map((c) => {
-          const line = computeLine(c, settings, isInterstate);
+          const line = computeLine(c, settings, isInterstate, documentType);
           return {
             piece_id: c.piece.id,
             metal_rate_per_gram: Number(c.metal_rate_per_gram),
@@ -143,6 +147,25 @@ export default function NewSale() {
   return (
     <div>
       <div className="page-header"><h2>New Sale</h2></div>
+
+      <div className="card">
+        <h3>Document type</h3>
+        <div style={{ display: 'flex', gap: 20 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <input type="radio" name="documentType" value="tax_invoice" checked={documentType === 'tax_invoice'} onChange={() => setDocumentType('tax_invoice')} style={{ width: 'auto' }} />
+            Tax Invoice (with GST)
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <input type="radio" name="documentType" value="estimate" checked={documentType === 'estimate'} onChange={() => setDocumentType('estimate')} style={{ width: 'auto' }} />
+            Estimate (without GST)
+          </label>
+        </div>
+        <p className="hint">
+          {documentType === 'tax_invoice'
+            ? 'Full GST tax invoice with your GSTIN and CGST/SGST/IGST breakup — this is the one to give your CA.'
+            : 'A plain estimate slip — no GSTIN or tax breakup shown, numbered separately from tax invoices.'}
+        </p>
+      </div>
 
       <div className="card">
         <h3>Customer</h3>
@@ -221,12 +244,14 @@ export default function NewSale() {
             <table>
               <thead>
                 <tr>
-                  <th>Item</th><th>Net Wt</th><th>Rate/g</th><th>Making</th><th>Stone chg</th><th>GST%</th><th>Taxable</th><th>Total</th><th></th>
+                  <th>Item</th><th>Net Wt</th><th>Rate/g</th><th>Making</th><th>Stone chg</th>
+                  {documentType === 'tax_invoice' && <th>GST%</th>}
+                  <th>Taxable</th><th>Total</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 {cart.map((item) => {
-                  const line = computeLine(item, settings, isInterstate);
+                  const line = computeLine(item, settings, isInterstate, documentType);
                   return (
                     <tr key={item.key}>
                       <td>{item.article.name}<div className="cart-meta">{item.piece.tag_number || `#${item.piece.id}`}</div></td>
@@ -242,7 +267,9 @@ export default function NewSale() {
                         <div className="cart-meta">= ₹{line.makingCharge.toFixed(2)}</div>
                       </td>
                       <td><input type="number" step="0.01" style={{ width: 90 }} value={item.stone_charge} onChange={(e) => updateCartItem(item.key, 'stone_charge', e.target.value)} /></td>
-                      <td><input type="number" step="0.01" style={{ width: 70 }} value={item.gst_rate} onChange={(e) => updateCartItem(item.key, 'gst_rate', e.target.value)} /></td>
+                      {documentType === 'tax_invoice' && (
+                        <td><input type="number" step="0.01" style={{ width: 70 }} value={item.gst_rate} onChange={(e) => updateCartItem(item.key, 'gst_rate', e.target.value)} /></td>
+                      )}
                       <td>₹{line.taxableValue.toFixed(2)}</td>
                       <td><strong>₹{line.lineTotal.toFixed(2)}</strong></td>
                       <td><button className="danger small" onClick={() => removeFromCart(item.key)}>✕</button></td>
@@ -265,15 +292,15 @@ export default function NewSale() {
 
             {totals && (
               <div className="totals-box">
-                <div className="row"><span>Taxable value</span><span>₹{totals.taxable.toFixed(2)}</span></div>
-                {isInterstate ? (
+                <div className="row"><span>{documentType === 'tax_invoice' ? 'Taxable value' : 'Amount'}</span><span>₹{totals.taxable.toFixed(2)}</span></div>
+                {documentType === 'tax_invoice' && (isInterstate ? (
                   <div className="row"><span>IGST</span><span>₹{totals.igst.toFixed(2)}</span></div>
                 ) : (
                   <>
                     <div className="row"><span>CGST</span><span>₹{totals.cgst.toFixed(2)}</span></div>
                     <div className="row"><span>SGST</span><span>₹{totals.sgst.toFixed(2)}</span></div>
                   </>
-                )}
+                ))}
                 {Number(discount) > 0 && <div className="row"><span>Discount</span><span>−₹{Number(discount).toFixed(2)}</span></div>}
                 {Number(oldGold) > 0 && <div className="row"><span>Old gold exchange</span><span>−₹{Number(oldGold).toFixed(2)}</span></div>}
                 <div className="row"><span>Round off</span><span>₹{totals.roundOff.toFixed(2)}</span></div>
@@ -285,7 +312,7 @@ export default function NewSale() {
         {error && <div className="error-text">{error}</div>}
         <div className="modal-actions">
           <button onClick={submitSale} disabled={submitting || cart.length === 0}>
-            {submitting ? 'Creating invoice...' : 'Generate GST Invoice'}
+            {submitting ? 'Creating...' : documentType === 'tax_invoice' ? 'Generate GST Invoice' : 'Generate Estimate'}
           </button>
         </div>
       </div>

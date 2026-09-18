@@ -18,11 +18,12 @@ export default function Invoices() {
           <div className="empty-state">No invoices yet.</div>
         ) : (
           <table>
-            <thead><tr><th>Invoice No.</th><th>Date</th><th>Customer</th><th>Payment</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>No.</th><th>Type</th><th>Date</th><th>Customer</th><th>Payment</th><th>Total</th><th>Status</th></tr></thead>
             <tbody>
               {invoices.map((inv) => (
                 <tr key={inv.id}>
                   <td><Link to={`/invoices/${inv.id}`}>{inv.invoice_number}</Link></td>
+                  <td><span className={`badge ${inv.document_type === 'estimate' ? 'low' : 'in_stock'}`}>{inv.document_type === 'estimate' ? 'Estimate' : 'Tax Invoice'}</span></td>
                   <td>{inv.invoice_date?.slice(0, 16).replace('T', ' ')}</td>
                   <td>{inv.customer_name || '—'}</td>
                   <td>{inv.payment_mode}</td>

@@ -48,8 +48,9 @@ router.post('/', async (req, res) => {
     let responseInvoice;
     await session.withTransaction(async () => {
       const settings = await db.collection('settings').findOne({ _id: SETTINGS_ID }, { session });
+      const documentType = b.document_type === 'estimate' ? 'estimate' : 'tax_invoice';
       const customer = b.customer || {};
-      const isInterstate = !!customer.state && !!settings.state &&
+      const isInterstate = documentType === 'tax_invoice' && !!customer.state && !!settings.state &&
         customer.state.trim().toLowerCase() !== settings.state.trim().toLowerCase();
 
       let taxableTotal = 0, cgstTotal = 0, sgstTotal = 0, igstTotal = 0;
@@ -80,14 +81,16 @@ router.post('/', async (req, res) => {
 
         const stoneCharge = Number(item.stone_charge ?? piece.stone_charge ?? 0);
         const taxableValue = round2(metalValue + makingCharge + stoneCharge);
-        const gstRate = Number(item.gst_rate_override ?? article.gst_rate);
+        const gstRate = documentType === 'estimate' ? 0 : Number(item.gst_rate_override ?? article.gst_rate);
 
         let cgst = 0, sgst = 0, igst = 0;
-        if (isInterstate) {
-          igst = round2(taxableValue * (gstRate / 100));
-        } else {
-          cgst = round2(taxableValue * (gstRate / 200));
-          sgst = round2(taxableValue * (gstRate / 200));
+        if (documentType === 'tax_invoice') {
+          if (isInterstate) {
+            igst = round2(taxableValue * (gstRate / 100));
+          } else {
+            cgst = round2(taxableValue * (gstRate / 200));
+            sgst = round2(taxableValue * (gstRate / 200));
+          }
         }
         const lineTotal = round2(taxableValue + cgst + sgst + igst);
 
@@ -138,16 +141,19 @@ router.post('/', async (req, res) => {
         customerId = String(custResult.insertedId);
       }
 
-      const invoiceNumber = `${settings.invoice_prefix}-${String(settings.next_invoice_no).padStart(4, '0')}`;
+      const prefix = documentType === 'estimate' ? (settings.estimate_prefix || 'EST') : settings.invoice_prefix;
+      const nextNo = documentType === 'estimate' ? (settings.next_estimate_no || 1) : settings.next_invoice_no;
+      const invoiceNumber = `${prefix}-${String(nextNo).padStart(4, '0')}`;
       const invoiceDoc = {
         invoice_number: invoiceNumber,
+        document_type: documentType,
         invoice_date: new Date().toISOString(),
         customer_id: customerId,
         customer_name: customer.name || '',
         customer_phone: customer.phone || '',
         customer_address: customer.address || '',
         customer_state: customer.state || '',
-        customer_gstin: customer.gstin || '',
+        customer_gstin: documentType === 'estimate' ? '' : (customer.gstin || ''),
         place_of_supply: customer.state || settings.state,
         is_interstate: isInterstate,
         discount,
@@ -172,9 +178,10 @@ router.post('/', async (req, res) => {
         { session }
       );
 
+      const counterField = documentType === 'estimate' ? 'next_estimate_no' : 'next_invoice_no';
       await db.collection('settings').updateOne(
         { _id: SETTINGS_ID },
-        { $inc: { next_invoice_no: 1 } },
+        { $inc: { [counterField]: 1 } },
         { session }
       );
 

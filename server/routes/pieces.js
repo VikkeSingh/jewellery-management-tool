@@ -17,7 +17,6 @@ router.post('/', async (req, res) => {
 
   const doc = {
     article_id: b.article_id,
-    tag_number: b.tag_number || null,
     huid: b.huid || '',
     gross_weight: gross,
     stone_weight: stone,
@@ -28,6 +27,10 @@ router.post('/', async (req, res) => {
     added_at: new Date().toISOString(),
     sold_at: null,
   };
+  // Only store tag_number when actually provided: a sparse unique index
+  // still indexes an explicit null, so leaving the key out entirely
+  // (rather than null) is what lets multiple pieces have no tag number.
+  if (b.tag_number) doc.tag_number = b.tag_number;
   try {
     const result = await db.collection('pieces').insertOne(doc);
     res.status(201).json(withId({ _id: result.insertedId, ...doc }));
@@ -70,7 +73,6 @@ router.put('/:id', async (req, res) => {
   const net = b.net_weight !== undefined ? Number(b.net_weight) : Math.max(gross - stone, 0);
 
   const update = {
-    tag_number: merged.tag_number || null,
     huid: merged.huid || '',
     gross_weight: gross,
     stone_weight: stone,
@@ -78,7 +80,10 @@ router.put('/:id', async (req, res) => {
     stone_charge: Number(merged.stone_charge ?? 0),
     cost_price: Number(merged.cost_price ?? 0),
   };
-  await db.collection('pieces').updateOne({ _id: toObjectId(req.params.id) }, { $set: update });
+  const ops = { $set: update };
+  if (merged.tag_number) update.tag_number = merged.tag_number;
+  else ops.$unset = { tag_number: '' };
+  await db.collection('pieces').updateOne({ _id: toObjectId(req.params.id) }, ops);
   const updated = await db.collection('pieces').findOne({ _id: toObjectId(req.params.id) });
   res.json(withId(updated));
 });

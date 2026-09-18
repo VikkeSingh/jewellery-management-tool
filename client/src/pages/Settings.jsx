@@ -53,10 +53,13 @@ export default function Settings() {
         </div>
 
         <div className="card">
-          <h3>Invoice numbering & footer</h3>
+          <h3>Numbering & footer</h3>
+          <p className="hint">Tax Invoices and Estimates are numbered separately, like separate books.</p>
           <div className="grid cols-2">
-            <div className="field"><label>Invoice number prefix</label><input value={form.invoice_prefix} onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value })} /></div>
-            <div className="field"><label>Next invoice number</label><input readOnly value={form.next_invoice_no} /></div>
+            <div className="field"><label>Tax Invoice number prefix</label><input value={form.invoice_prefix} onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value })} /></div>
+            <div className="field"><label>Next Tax Invoice number</label><input readOnly value={form.next_invoice_no} /></div>
+            <div className="field"><label>Estimate number prefix</label><input value={form.estimate_prefix || ''} onChange={(e) => setForm({ ...form, estimate_prefix: e.target.value })} /></div>
+            <div className="field"><label>Next Estimate number</label><input readOnly value={form.next_estimate_no ?? 1} /></div>
           </div>
           <div className="field"><label>Invoice footer note</label><textarea rows={2} value={form.invoice_footer} onChange={(e) => setForm({ ...form, invoice_footer: e.target.value })} /></div>
         </div>

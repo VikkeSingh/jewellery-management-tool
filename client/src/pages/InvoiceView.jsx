@@ -42,10 +42,10 @@ export default function InvoiceView() {
         {isCancelled && <div className="badge sold" style={{ marginBottom: 10 }}>CANCELLED</div>}
         <div className="invoice-logo">
           <LogoLJ size={120} />
+          <div className="shop-name">{settings.shop_name}</div>
         </div>
         <div className="invoice-head">
           <div>
-            <div className="shop-name">{settings.shop_name}</div>
             <div>{settings.address}</div>
             <div>{settings.state}</div>
             <div>Phone: {settings.phone} {settings.email ? `| ${settings.email}` : ''}</div>

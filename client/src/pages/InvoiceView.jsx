@@ -56,6 +56,7 @@ export default function InvoiceView() {
             <div>{isEstimate ? 'Estimate' : 'Invoice'} No: <strong>{data.invoice_number}</strong></div>
             <div>Date: {data.invoice_date?.slice(0, 16).replace('T', ' ')}</div>
             <div>Payment: {data.payment_mode}</div>
+            {data.order_number && <div>Against order: {data.order_number}</div>}
           </div>
         </div>
 
@@ -137,6 +138,7 @@ export default function InvoiceView() {
           ))}
           {data.discount > 0 && <div className="row"><span>Discount</span><span>−₹{data.discount.toFixed(2)}</span></div>}
           {data.old_gold_exchange_value > 0 && <div className="row"><span>Old gold exchange</span><span>−₹{data.old_gold_exchange_value.toFixed(2)}</span></div>}
+          {data.advance_paid > 0 && <div className="row"><span>Advance paid ({data.order_number})</span><span>−₹{data.advance_paid.toFixed(2)}</span></div>}
           <div className="row"><span>Round off</span><span>₹{data.round_off.toFixed(2)}</span></div>
           <div className="row grand"><span>Grand Total</span><span>₹{data.grand_total.toLocaleString('en-IN')}</span></div>
         </div>

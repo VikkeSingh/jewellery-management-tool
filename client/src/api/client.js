@@ -53,4 +53,11 @@ export const api = {
     create: (body) => request('/invoices', { method: 'POST', body: JSON.stringify(body) }),
     cancel: (id) => request(`/invoices/${id}/cancel`, { method: 'POST' }),
   },
+  orders: {
+    list: (status) => request(`/orders${status ? `?status=${status}` : ''}`),
+    get: (id) => request(`/orders/${id}`),
+    create: (body) => request('/orders', { method: 'POST', body: JSON.stringify(body) }),
+    cancel: (id) => request(`/orders/${id}/cancel`, { method: 'POST' }),
+    complete: (id, body) => request(`/orders/${id}/complete`, { method: 'POST', body: JSON.stringify(body) }),
+  },
 };

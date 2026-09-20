@@ -21,6 +21,7 @@ router.get('/', async (req, res) => {
     {
       $addFields: {
         quantity: { $size: { $filter: { input: '$pieces', cond: { $eq: ['$$this.status', 'in_stock'] } } } },
+        reserved_quantity: { $size: { $filter: { input: '$pieces', cond: { $eq: ['$$this.status', 'reserved'] } } } },
         total_net_weight: {
           $sum: {
             $map: {
@@ -102,9 +103,9 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   if (!isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Article not found' });
   const db = await getDb();
-  const inStock = await db.collection('pieces').countDocuments({ article_id: req.params.id, status: 'in_stock' });
-  if (inStock > 0) {
-    return res.status(400).json({ error: 'Cannot delete an article that still has stock. Remove/sell its pieces first.' });
+  const activeCount = await db.collection('pieces').countDocuments({ article_id: req.params.id, status: { $in: ['in_stock', 'reserved'] } });
+  if (activeCount > 0) {
+    return res.status(400).json({ error: 'Cannot delete an article that still has stock or reserved pieces. Remove/sell them first.' });
   }
   await db.collection('articles').updateOne({ _id: toObjectId(req.params.id) }, { $set: { is_active: false } });
   res.json({ ok: true });

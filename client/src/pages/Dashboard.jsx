@@ -5,12 +5,13 @@ import { api } from '../api/client.js';
 export default function Dashboard() {
   const [articles, setArticles] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [pendingOrders, setPendingOrders] = useState([]);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.articles.list(), api.invoices.list(), api.settings.get()])
-      .then(([a, i, s]) => { setArticles(a); setInvoices(i); setSettings(s); })
+    Promise.all([api.articles.list(), api.invoices.list(), api.settings.get(), api.orders.list('pending')])
+      .then(([a, i, s, o]) => { setArticles(a); setInvoices(i); setSettings(s); setPendingOrders(o); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -31,6 +32,7 @@ export default function Dashboard() {
 
   const lowStock = articles.filter((a) => a.quantity > 0 && a.quantity <= 2);
   const recentInvoices = invoices.slice(0, 6);
+  const totalAdvanceHeld = pendingOrders.reduce((sum, o) => sum + o.advance_amount, 0);
 
   return (
     <div>
@@ -56,6 +58,30 @@ export default function Dashboard() {
       </div>
 
       <div className="grid cols-2">
+        <div className="card">
+          <h3>Pending orders</h3>
+          {pendingOrders.length === 0 ? (
+            <p className="hint">No orders awaiting completion.</p>
+          ) : (
+            <>
+              <p className="hint">{pendingOrders.length} order{pendingOrders.length === 1 ? '' : 's'} · ₹{totalAdvanceHeld.toLocaleString('en-IN')} in advances held</p>
+              <table>
+                <thead><tr><th>Order</th><th>Customer</th><th>Advance</th></tr></thead>
+                <tbody>
+                  {pendingOrders.slice(0, 5).map((o) => (
+                    <tr key={o.id}>
+                      <td><Link to={`/orders/${o.id}`}>{o.order_number}</Link></td>
+                      <td>{o.customer_name}</td>
+                      <td>₹{o.advance_amount.toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {pendingOrders.length > 5 && <p className="hint"><Link to="/orders">View all {pendingOrders.length} pending orders →</Link></p>}
+            </>
+          )}
+        </div>
+
         <div className="card">
           <h3>Low stock (≤ 2 pieces)</h3>
           {lowStock.length === 0 ? (

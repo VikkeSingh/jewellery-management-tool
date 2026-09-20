@@ -79,7 +79,10 @@ export default function Inventory() {
                   <td>{a.metal}</td>
                   <td>{a.purity || '—'}</td>
                   <td>{a.gst_rate}%</td>
-                  <td><span className={`badge ${a.quantity > 2 ? 'in_stock' : a.quantity > 0 ? 'low' : 'sold'}`}>{a.quantity}</span></td>
+                  <td>
+                    <span className={`badge ${a.quantity > 2 ? 'in_stock' : a.quantity > 0 ? 'low' : 'sold'}`}>{a.quantity}</span>
+                    {a.reserved_quantity > 0 && <div className="hint">+{a.reserved_quantity} reserved</div>}
+                  </td>
                   <td>{a.total_net_weight.toFixed(2)}</td>
                 </tr>
               ))}

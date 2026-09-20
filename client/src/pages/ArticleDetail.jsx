@@ -65,6 +65,7 @@ export default function ArticleDetail() {
   if (!article) return <p>Loading...</p>;
 
   const inStock = article.pieces.filter((p) => p.status === 'in_stock');
+  const reserved = article.pieces.filter((p) => p.status === 'reserved');
   const sold = article.pieces.filter((p) => p.status === 'sold');
 
   return (
@@ -82,7 +83,7 @@ export default function ArticleDetail() {
 
       <div className="grid cols-4">
         <div className="card stat"><div className="value">{article.metal}</div><div className="label">Metal / {article.purity || '—'}</div></div>
-        <div className="card stat"><div className="value">{inStock.length}</div><div className="label">Pieces in stock</div></div>
+        <div className="card stat"><div className="value">{inStock.length}</div><div className="label">Pieces in stock{reserved.length > 0 ? ` (+${reserved.length} reserved)` : ''}</div></div>
         <div className="card stat"><div className="value">{article.gst_rate}%</div><div className="label">GST rate</div></div>
         <div className="card stat"><div className="value">{article.making_charge_type === 'per_gram' ? `₹${article.making_charge_value}/g` : article.making_charge_type === 'percentage' ? `${article.making_charge_value}%` : `₹${article.making_charge_value}`}</div><div className="label">Making charge</div></div>
       </div>
@@ -108,6 +109,25 @@ export default function ArticleDetail() {
           </table>
         )}
       </div>
+
+      {reserved.length > 0 && (
+        <div className="card">
+          <h3>Reserved for pending orders ({reserved.length})</h3>
+          <p className="hint">These pieces are held against an order's advance payment and can't be sold or edited until the order is completed or cancelled.</p>
+          <table>
+            <thead><tr><th>Tag</th><th>HUID</th><th>Net (g)</th></tr></thead>
+            <tbody>
+              {reserved.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.tag_number || '—'}</td>
+                  <td>{p.huid || '—'}</td>
+                  <td>{p.net_weight.toFixed(3)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {sold.length > 0 && (
         <div className="card">

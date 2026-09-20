@@ -65,6 +65,7 @@ router.put('/:id', async (req, res) => {
   const existing = await db.collection('pieces').findOne({ _id: toObjectId(req.params.id) });
   if (!existing) return res.status(404).json({ error: 'Piece not found' });
   if (existing.status === 'sold') return res.status(400).json({ error: 'Cannot edit a sold piece' });
+  if (existing.status === 'reserved') return res.status(400).json({ error: 'Cannot edit a piece reserved for a pending order. Cancel the order first.' });
 
   const b = req.body || {};
   const merged = { ...existing, ...b };
@@ -94,6 +95,7 @@ router.delete('/:id', async (req, res) => {
   const existing = await db.collection('pieces').findOne({ _id: toObjectId(req.params.id) });
   if (!existing) return res.status(404).json({ error: 'Piece not found' });
   if (existing.status === 'sold') return res.status(400).json({ error: 'Cannot delete a sold piece (it is part of an invoice history)' });
+  if (existing.status === 'reserved') return res.status(400).json({ error: 'Cannot delete a piece reserved for a pending order. Cancel the order first.' });
   await db.collection('pieces').deleteOne({ _id: toObjectId(req.params.id) });
   res.json({ ok: true });
 });

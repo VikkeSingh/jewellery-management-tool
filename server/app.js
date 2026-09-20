@@ -12,6 +12,7 @@ import articlesRouter from './routes/articles.js';
 import piecesRouter from './routes/pieces.js';
 import customersRouter from './routes/customers.js';
 import invoicesRouter from './routes/invoices.js';
+import ordersRouter from './routes/orders.js';
 
 const app = express();
 
@@ -36,5 +37,6 @@ app.use('/api/articles', requireAuth, articlesRouter);
 app.use('/api/pieces', requireAuth, piecesRouter);
 app.use('/api/customers', requireAuth, customersRouter);
 app.use('/api/invoices', requireAuth, invoicesRouter);
+app.use('/api/orders', requireAuth, ordersRouter);
 
 export default app;

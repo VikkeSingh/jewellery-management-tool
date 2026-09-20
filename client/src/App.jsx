@@ -5,6 +5,10 @@ import ArticleDetail from './pages/ArticleDetail.jsx';
 import NewSale from './pages/NewSale.jsx';
 import Invoices from './pages/Invoices.jsx';
 import InvoiceView from './pages/InvoiceView.jsx';
+import Orders from './pages/Orders.jsx';
+import NewOrder from './pages/NewOrder.jsx';
+import OrderReceiptView from './pages/OrderReceiptView.jsx';
+import CompleteOrder from './pages/CompleteOrder.jsx';
 import Customers from './pages/Customers.jsx';
 import Settings from './pages/Settings.jsx';
 import Login from './pages/Login.jsx';
@@ -15,6 +19,7 @@ const links = [
   { to: '/inventory', label: 'Inventory' },
   { to: '/sale', label: 'New Sale' },
   { to: '/invoices', label: 'Invoices' },
+  { to: '/orders', label: 'Orders' },
   { to: '/customers', label: 'Customers' },
   { to: '/settings', label: 'Settings' },
 ];
@@ -51,6 +56,10 @@ export default function App() {
           <Route path="/sale" element={<NewSale />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/:id" element={<InvoiceView />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/orders/new" element={<NewOrder />} />
+          <Route path="/orders/:id" element={<OrderReceiptView />} />
+          <Route path="/orders/:id/complete" element={<CompleteOrder />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

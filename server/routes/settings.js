@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
 router.put('/', async (req, res) => {
   const fields = [
     'shop_name', 'address', 'state', 'phone', 'email', 'gstin',
-    'invoice_prefix', 'estimate_prefix', 'invoice_footer', 'gold_rate_per_gram', 'silver_rate_per_gram'
+    'invoice_prefix', 'estimate_prefix', 'order_prefix', 'invoice_footer', 'gold_rate_per_gram', 'silver_rate_per_gram'
   ];
   const body = req.body || {};
   const update = {};

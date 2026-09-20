@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
+import LogoLJ from '../components/LogoLJ.jsx';
 
 export default function InvoiceView() {
   const { id } = useParams();
@@ -39,6 +40,9 @@ export default function InvoiceView() {
 
       <div className="invoice-sheet">
         {isCancelled && <div className="badge sold" style={{ marginBottom: 10 }}>CANCELLED</div>}
+        <div className="invoice-logo">
+          <LogoLJ />
+        </div>
         <div className="invoice-head">
           <div>
             <div className="shop-name">{settings.shop_name}</div>

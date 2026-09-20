@@ -195,6 +195,8 @@ tr:hover td { background: #faf6ea; }
   border-radius: var(--radius);
 }
 .invoice-sheet h2 { margin: 0; }
+.invoice-logo { text-align: center; padding-bottom: 10px; margin-bottom: 14px; border-bottom: 2px solid var(--ink); }
+.invoice-logo svg { display: inline-block; }
 .invoice-head { display: flex; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 14px; }
 .invoice-head .shop-name { font-size: 20px; font-weight: 700; }
 .invoice-parties { display: flex; justify-content: space-between; margin-bottom: 16px; gap: 20px; }
@@ -210,6 +212,7 @@ tr:hover td { background: #faf6ea; }
   .no-print { display: none !important; }
   body { background: #fff; }
   .invoice-sheet { border: none; padding: 0; max-width: 100%; }
+  .invoice-logo svg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .main { padding: 0; }
   .sidebar { display: none; }
 }

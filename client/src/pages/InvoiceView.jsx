@@ -41,7 +41,7 @@ export default function InvoiceView() {
       <div className="invoice-sheet">
         {isCancelled && <div className="badge sold" style={{ marginBottom: 10 }}>CANCELLED</div>}
         <div className="invoice-logo">
-          <LogoLJ />
+          <LogoLJ size={120} />
         </div>
         <div className="invoice-head">
           <div>

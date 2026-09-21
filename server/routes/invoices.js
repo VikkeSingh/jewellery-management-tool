@@ -25,7 +25,7 @@ router.get('/:id', async (req, res) => {
  * Create an invoice directly from in-stock pieces (a regular walk-in sale).
  * body: {
  *   document_type, customer: { id?, name, phone, address, state, gstin },
- *   payment_mode, discount, old_gold_exchange_value,
+ *   payment_mode, discount, old_gold_exchange_value, old_silver_exchange_value,
  *   items: [{ piece_id, metal_rate_per_gram, making_charge, stone_charge, gst_rate_override }]
  * }
  */
@@ -60,6 +60,7 @@ router.post('/', async (req, res) => {
         payment_mode: b.payment_mode,
         discount: b.discount,
         old_gold_exchange_value: b.old_gold_exchange_value,
+        old_silver_exchange_value: b.old_silver_exchange_value,
       });
 
       const invoiceResult = await db.collection('invoices').insertOne(invoiceDoc, { session });

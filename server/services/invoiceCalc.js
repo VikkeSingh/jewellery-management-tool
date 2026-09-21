@@ -117,9 +117,10 @@ export function buildInvoiceDoc(settings, calc, opts) {
   const customer = opts.customer || {};
   const discount = round2(Number(opts.discount ?? 0));
   const oldGoldValue = round2(Number(opts.old_gold_exchange_value ?? 0));
+  const oldSilverValue = round2(Number(opts.old_silver_exchange_value ?? 0));
   const advancePaid = round2(Number(opts.advance_paid ?? 0));
   const preRoundTotal = round2(
-    calc.taxableTotal + calc.cgstTotal + calc.sgstTotal + calc.igstTotal - discount - oldGoldValue - advancePaid
+    calc.taxableTotal + calc.cgstTotal + calc.sgstTotal + calc.igstTotal - discount - oldGoldValue - oldSilverValue - advancePaid
   );
   const grandTotal = Math.round(preRoundTotal);
   const roundOff = round2(grandTotal - preRoundTotal);
@@ -149,6 +150,7 @@ export function buildInvoiceDoc(settings, calc, opts) {
     grand_total: grandTotal,
     payment_mode: opts.payment_mode || 'Cash',
     old_gold_exchange_value: oldGoldValue,
+    old_silver_exchange_value: oldSilverValue,
     advance_paid: advancePaid,
     order_id: opts.orderId || null,
     order_number: opts.orderNumber || null,

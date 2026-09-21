@@ -49,6 +49,7 @@ export default function NewSale() {
 
   const [discount, setDiscount] = useState(0);
   const [oldGold, setOldGold] = useState(0);
+  const [oldSilver, setOldSilver] = useState(0);
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -106,10 +107,10 @@ export default function NewSale() {
       const line = computeLine(item, settings, isInterstate, documentType);
       taxable += line.taxableValue; cgst += line.cgst; sgst += line.sgst; igst += line.igst;
     }
-    const preRound = round2(taxable + cgst + sgst + igst - Number(discount || 0) - Number(oldGold || 0));
+    const preRound = round2(taxable + cgst + sgst + igst - Number(discount || 0) - Number(oldGold || 0) - Number(oldSilver || 0));
     const grand = Math.round(preRound);
     return { taxable: round2(taxable), cgst: round2(cgst), sgst: round2(sgst), igst: round2(igst), grand, roundOff: round2(grand - preRound) };
-  }, [cart, settings, isInterstate, documentType, discount, oldGold]);
+  }, [cart, settings, isInterstate, documentType, discount, oldGold, oldSilver]);
 
   async function submitSale() {
     setError('');
@@ -123,6 +124,7 @@ export default function NewSale() {
         payment_mode: paymentMode,
         discount: Number(discount || 0),
         old_gold_exchange_value: Number(oldGold || 0),
+        old_silver_exchange_value: Number(oldSilver || 0),
         items: cart.map((c) => {
           const line = computeLine(c, settings, isInterstate, documentType);
           return {
@@ -279,9 +281,10 @@ export default function NewSale() {
               </tbody>
             </table>
 
-            <div className="grid cols-3" style={{ marginTop: 16 }}>
+            <div className="grid cols-4" style={{ marginTop: 16 }}>
               <div className="field"><label>Discount (₹)</label><input type="number" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} /></div>
               <div className="field"><label>Old gold exchange value (₹)</label><input type="number" step="0.01" value={oldGold} onChange={(e) => setOldGold(e.target.value)} /></div>
+              <div className="field"><label>Old silver exchange value (₹)</label><input type="number" step="0.01" value={oldSilver} onChange={(e) => setOldSilver(e.target.value)} /></div>
               <div className="field">
                 <label>Payment mode</label>
                 <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
@@ -303,6 +306,7 @@ export default function NewSale() {
                 ))}
                 {Number(discount) > 0 && <div className="row"><span>Discount</span><span>−₹{Number(discount).toFixed(2)}</span></div>}
                 {Number(oldGold) > 0 && <div className="row"><span>Old gold exchange</span><span>−₹{Number(oldGold).toFixed(2)}</span></div>}
+                {Number(oldSilver) > 0 && <div className="row"><span>Old silver exchange</span><span>−₹{Number(oldSilver).toFixed(2)}</span></div>}
                 <div className="row"><span>Round off</span><span>₹{totals.roundOff.toFixed(2)}</span></div>
                 <div className="row grand"><span>Grand Total</span><span>₹{totals.grand.toLocaleString('en-IN')}</span></div>
               </div>

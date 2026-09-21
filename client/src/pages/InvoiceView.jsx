@@ -3,6 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import LogoLJ from '../components/LogoLJ.jsx';
 
+function makingPercent(it) {
+  if (!it.metal_value) return '—';
+  return `${((it.making_charge / it.metal_value) * 100).toFixed(2)}%`;
+}
+
 export default function InvoiceView() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -100,7 +105,7 @@ export default function InvoiceView() {
               {!isEstimate && <th>HSN</th>}
               <th>Purity</th>
               <th>Gross (g)</th><th>Net (g)</th><th>Rate/g</th><th>Metal Val.</th>
-              <th>Making</th><th>Stone</th><th>{isEstimate ? 'Amount' : 'Taxable'}</th>
+              <th>Making %</th><th>Stone</th><th>{isEstimate ? 'Amount' : 'Taxable'}</th>
               {!isEstimate && <th>GST%</th>}
               <th>Total</th>
             </tr>
@@ -116,7 +121,7 @@ export default function InvoiceView() {
                 <td>{it.net_weight.toFixed(3)}</td>
                 <td>₹{it.metal_rate_per_gram.toFixed(2)}</td>
                 <td>₹{it.metal_value.toFixed(2)}</td>
-                <td>₹{it.making_charge.toFixed(2)}</td>
+                <td>{makingPercent(it)}</td>
                 <td>₹{it.stone_charge.toFixed(2)}</td>
                 <td>₹{it.taxable_value.toFixed(2)}</td>
                 {!isEstimate && <td>{it.gst_rate}%</td>}

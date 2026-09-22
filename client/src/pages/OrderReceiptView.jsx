@@ -76,12 +76,16 @@ export default function OrderReceiptView() {
         </div>
 
         <table>
-          <thead><tr><th>Item ordered</th><th>Purity</th><th>Est. Weight (g)</th></tr></thead>
+          <thead><tr><th>Item ordered</th><th>Purity</th><th>Est. Weight / Carat</th></tr></thead>
           <tbody>
             <tr>
               <td>{piece ? data.article_name : data.description}</td>
               <td>{piece ? piece.purity || '—' : '—'}</td>
-              <td>{piece ? piece.net_weight.toFixed(3) : (data.estimated_weight != null ? data.estimated_weight : '—')}</td>
+              <td>
+                {piece
+                  ? (data.article_metal === 'Diamond' ? `${(piece.carat_weight || 0).toFixed(3)} ct` : `${piece.net_weight.toFixed(3)} g`)
+                  : (data.estimated_weight != null ? `${data.estimated_weight} g` : '—')}
+              </td>
             </tr>
           </tbody>
         </table>

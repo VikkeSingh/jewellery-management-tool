@@ -28,6 +28,7 @@ export async function ensureDb() {
         invoice_footer: process.env.SEED_INVOICE_FOOTER || 'Thank you for your business!',
         gold_rate_per_gram: Number(process.env.SEED_GOLD_RATE || 0),
         silver_rate_per_gram: Number(process.env.SEED_SILVER_RATE || 0),
+        diamond_rate_per_carat: Number(process.env.SEED_DIAMOND_RATE || 0),
       },
     },
     { upsert: true }
@@ -42,6 +43,10 @@ export async function ensureDb() {
   await db.collection('settings').updateOne(
     { _id: SETTINGS_ID, order_prefix: { $exists: false } },
     { $set: { order_prefix: 'ORD', next_order_no: 1 } }
+  );
+  await db.collection('settings').updateOne(
+    { _id: SETTINGS_ID, diamond_rate_per_carat: { $exists: false } },
+    { $set: { diamond_rate_per_carat: 0 } }
   );
 
   await Promise.all([

@@ -34,9 +34,10 @@ export default function Settings() {
         <div className="card">
           <h3>Today's metal rates</h3>
           <p className="hint">Update these daily — they're used to auto-price items during billing (you can still override per sale).</p>
-          <div className="grid cols-2">
+          <div className="grid cols-3">
             <div className="field"><label>Gold rate (₹ per gram)</label><input type="number" step="0.01" value={form.gold_rate_per_gram} onChange={(e) => setForm({ ...form, gold_rate_per_gram: Number(e.target.value) })} /></div>
             <div className="field"><label>Silver rate (₹ per gram)</label><input type="number" step="0.01" value={form.silver_rate_per_gram} onChange={(e) => setForm({ ...form, silver_rate_per_gram: Number(e.target.value) })} /></div>
+            <div className="field"><label>Diamond rate (₹ per carat)</label><input type="number" step="0.01" value={form.diamond_rate_per_carat || 0} onChange={(e) => setForm({ ...form, diamond_rate_per_carat: Number(e.target.value) })} /></div>
           </div>
         </div>
 

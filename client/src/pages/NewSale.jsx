@@ -19,7 +19,8 @@ function computeMakingCharge(item, metalValue) {
 
 function computeLine(item, settings, isInterstate, documentType) {
   const rate = Number(item.metal_rate_per_gram);
-  const metalValue = round2(rate * item.piece.net_weight);
+  const quantity = item.pricing_unit === 'carat' ? Number(item.piece.carat_weight || 0) : item.piece.net_weight;
+  const metalValue = round2(rate * quantity);
   const makingCharge = computeMakingCharge(item, metalValue);
   const stoneCharge = Number(item.stone_charge);
   const taxableValue = round2(metalValue + makingCharge + stoneCharge);
@@ -85,11 +86,15 @@ export default function NewSale() {
   function addToCart() {
     const piece = availablePieces.find((p) => String(p.id) === String(selectedPieceId));
     if (!piece || !selectedArticle) return;
-    const rate = selectedArticle.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram;
+    const pricingUnit = selectedArticle.metal === 'Diamond' ? 'carat' : 'gram';
+    const rate = pricingUnit === 'carat'
+      ? settings.diamond_rate_per_carat
+      : (selectedArticle.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram);
 
     setCart([...cart, {
       key: `${piece.id}-${Date.now()}`,
       piece, article: selectedArticle,
+      pricing_unit: pricingUnit,
       metal_rate_per_gram: rate || 0,
       making_charge_mode: selectedArticle.making_charge_type || 'per_gram',
       making_charge_input: selectedArticle.making_charge_value || 0,
@@ -239,7 +244,9 @@ export default function NewSale() {
             <select value={selectedPieceId} onChange={(e) => setSelectedPieceId(e.target.value)} disabled={!selectedArticleId}>
               <option value="">Select piece...</option>
               {availablePieces.map((p) => (
-                <option key={p.id} value={p.id}>{p.tag_number || `#${p.id}`} — {p.net_weight}g{p.huid ? ` (HUID ${p.huid})` : ''}</option>
+                <option key={p.id} value={p.id}>
+                  {p.tag_number || `#${p.id}`} — {selectedArticle?.metal === 'Diamond' ? `${p.carat_weight || 0}ct` : `${p.net_weight}g`}{p.huid ? ` (HUID ${p.huid})` : ''}
+                </option>
               ))}
             </select>
           </div>
@@ -257,7 +264,7 @@ export default function NewSale() {
             <table>
               <thead>
                 <tr>
-                  <th>Item</th><th>Net Wt</th><th>Rate/g</th><th>Making</th><th>Stone chg</th>
+                  <th>Item</th><th>Weight/Ct</th><th>Rate</th><th>Making</th><th>Stone chg</th>
                   {documentType === 'tax_invoice' && <th>GST%</th>}
                   <th>Taxable</th><th>Total</th><th></th>
                 </tr>
@@ -268,8 +275,11 @@ export default function NewSale() {
                   return (
                     <tr key={item.key}>
                       <td>{item.article.name}<div className="cart-meta">{item.piece.tag_number || `#${item.piece.id}`}</div></td>
-                      <td>{item.piece.net_weight.toFixed(3)}</td>
-                      <td><input type="number" step="0.01" style={{ width: 90 }} value={item.metal_rate_per_gram} onChange={(e) => updateCartItem(item.key, 'metal_rate_per_gram', e.target.value)} /></td>
+                      <td>{item.pricing_unit === 'carat' ? `${(item.piece.carat_weight || 0).toFixed(3)} ct` : `${item.piece.net_weight.toFixed(3)} g`}</td>
+                      <td>
+                        <input type="number" step="0.01" style={{ width: 90 }} value={item.metal_rate_per_gram} onChange={(e) => updateCartItem(item.key, 'metal_rate_per_gram', e.target.value)} />
+                        <div className="cart-meta">₹/{item.pricing_unit === 'carat' ? 'ct' : 'g'}</div>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <input type="number" step="0.01" style={{ width: 60 }} value={item.making_charge_input} onChange={(e) => updateCartItem(item.key, 'making_charge_input', e.target.value)} />

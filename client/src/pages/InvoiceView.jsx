@@ -104,7 +104,7 @@ export default function InvoiceView() {
               <th>#</th><th>Description</th>
               {!isEstimate && <th>HSN</th>}
               <th>Purity</th>
-              <th>Gross (g)</th><th>Net (g)</th><th>Rate/g</th><th>Metal Val.</th>
+              <th>Gross (g)</th><th>Wt/Ct</th><th>Rate</th><th>Value</th>
               <th>Making %</th><th>Stone</th><th>{isEstimate ? 'Amount' : 'Taxable'}</th>
               {!isEstimate && <th>GST%</th>}
               <th>Total</th>
@@ -118,8 +118,8 @@ export default function InvoiceView() {
                 {!isEstimate && <td>{it.hsn_code}</td>}
                 <td>{it.purity}</td>
                 <td>{it.gross_weight.toFixed(3)}</td>
-                <td>{it.net_weight.toFixed(3)}</td>
-                <td>₹{it.metal_rate_per_gram.toFixed(2)}</td>
+                <td>{it.pricing_unit === 'carat' ? `${(it.carat_weight || 0).toFixed(3)} ct` : `${it.net_weight.toFixed(3)} g`}</td>
+                <td>₹{it.metal_rate_per_gram.toFixed(2)}/{it.pricing_unit === 'carat' ? 'ct' : 'g'}</td>
                 <td>₹{it.metal_value.toFixed(2)}</td>
                 <td>{makingPercent(it)}</td>
                 <td>₹{it.stone_charge.toFixed(2)}</td>

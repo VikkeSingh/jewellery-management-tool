@@ -40,8 +40,13 @@ export async function computeInvoiceLines(db, session, settings, opts) {
     const article = await db.collection('articles').findOne({ _id: toObjectId(piece.article_id) }, { session });
     if (!article) throw { status: 404, message: `Article for piece ${item.piece_id} not found` };
 
-    const rate = Number(item.metal_rate_per_gram ?? (article.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram));
-    const metalValue = round2(rate * piece.net_weight);
+    const pricingUnit = article.metal === 'Diamond' ? 'carat' : 'gram';
+    const quantity = pricingUnit === 'carat' ? Number(piece.carat_weight || 0) : piece.net_weight;
+    const defaultRate = pricingUnit === 'carat'
+      ? settings.diamond_rate_per_carat
+      : (article.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram);
+    const rate = Number(item.metal_rate_per_gram ?? defaultRate);
+    const metalValue = round2(rate * quantity);
 
     let makingCharge = 0;
     if (item.making_charge !== undefined) {
@@ -80,9 +85,12 @@ export async function computeInvoiceLines(db, session, settings, opts) {
       description: article.name,
       hsn_code: article.hsn_code,
       purity: article.purity,
+      metal: article.metal,
+      pricing_unit: pricingUnit,
       gross_weight: piece.gross_weight,
       stone_weight: piece.stone_weight,
       net_weight: piece.net_weight,
+      carat_weight: pricingUnit === 'carat' ? quantity : 0,
       metal_rate_per_gram: rate,
       metal_value: metalValue,
       making_charge: makingCharge,

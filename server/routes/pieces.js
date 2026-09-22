@@ -21,6 +21,7 @@ router.post('/', async (req, res) => {
     gross_weight: gross,
     stone_weight: stone,
     net_weight: net,
+    carat_weight: b.carat_weight !== undefined && b.carat_weight !== '' ? Number(b.carat_weight) : 0,
     stone_charge: Number(b.stone_charge ?? 0),
     cost_price: Number(b.cost_price ?? 0),
     status: 'in_stock',
@@ -78,6 +79,7 @@ router.put('/:id', async (req, res) => {
     gross_weight: gross,
     stone_weight: stone,
     net_weight: net,
+    carat_weight: merged.carat_weight !== undefined && merged.carat_weight !== '' ? Number(merged.carat_weight) : 0,
     stone_charge: Number(merged.stone_charge ?? 0),
     cost_price: Number(merged.cost_price ?? 0),
   };

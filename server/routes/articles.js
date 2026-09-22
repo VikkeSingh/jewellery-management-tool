@@ -31,6 +31,15 @@ router.get('/', async (req, res) => {
             },
           },
         },
+        total_carat_weight: {
+          $sum: {
+            $map: {
+              input: { $filter: { input: '$pieces', cond: { $eq: ['$$this.status', 'in_stock'] } } },
+              as: 'p',
+              in: { $ifNull: ['$$p.carat_weight', 0] },
+            },
+          },
+        },
       },
     },
     { $project: { pieces: 0 } },

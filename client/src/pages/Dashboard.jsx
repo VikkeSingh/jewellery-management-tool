@@ -25,9 +25,6 @@ export default function Dashboard() {
   const silverValue = articles
     .filter((a) => a.metal === 'Silver')
     .reduce((sum, a) => sum + a.total_net_weight * (settings?.silver_rate_per_gram || 0), 0);
-  const diamondValue = articles
-    .filter((a) => a.metal === 'Diamond')
-    .reduce((sum, a) => sum + (a.total_carat_weight || 0) * (settings?.diamond_rate_per_carat || 0), 0);
 
   const today = new Date().toISOString().slice(0, 10);
   const todaysInvoices = invoices.filter((inv) => inv.invoice_date?.slice(0, 10) === today && inv.status !== 'cancelled');
@@ -51,7 +48,7 @@ export default function Dashboard() {
           <div className="label">Pieces in stock ({totalWeight.toFixed(2)} g)</div>
         </div>
         <div className="card stat">
-          <div className="value">₹{(goldValue + silverValue + diamondValue).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+          <div className="value">₹{(goldValue + silverValue).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
           <div className="label">Est. stock value (at current rates)</div>
         </div>
         <div className="card stat">

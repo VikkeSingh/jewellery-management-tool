@@ -86,25 +86,29 @@ export default function InvoiceView() {
         <table className="invoice-items-table">
           <colgroup>
             <col style={{ width: '3%' }} />
-            <col style={{ width: isEstimate ? '20%' : '14%' }} />
-            {!isEstimate && <col style={{ width: '6%' }} />}
-            <col style={{ width: isEstimate ? '7%' : '6%' }} />
-            <col style={{ width: isEstimate ? '8%' : '7%' }} />
-            <col style={{ width: isEstimate ? '8%' : '7%' }} />
-            <col style={{ width: isEstimate ? '9%' : '8%' }} />
-            <col style={{ width: isEstimate ? '10%' : '9%' }} />
-            <col style={{ width: isEstimate ? '9%' : '8%' }} />
-            <col style={{ width: isEstimate ? '8%' : '7%' }} />
-            <col style={{ width: isEstimate ? '10%' : '9%' }} />
+            <col style={{ width: isEstimate ? '22%' : '12%' }} />
             {!isEstimate && <col style={{ width: '5%' }} />}
-            <col style={{ width: isEstimate ? '8%' : '11%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '8%' }} />
+            {!isEstimate && <col style={{ width: '5%' }} />}
+            <col style={{ width: '8%' }} />
           </colgroup>
           <thead>
             <tr>
               <th>#</th><th>Description</th>
               {!isEstimate && <th>HSN</th>}
               <th>Purity</th>
-              <th>Gross (g)</th><th>Wt/Ct</th><th>Rate</th><th>Value</th>
+              <th>Gross (g)</th><th>Net (g)</th><th>Rate/g</th>
+              <th>Diamond Rate</th><th>Diamond Ct/Kt</th>
+              <th>Metal Val.</th>
               <th>Making %</th><th>Stone</th><th>{isEstimate ? 'Amount' : 'Taxable'}</th>
               {!isEstimate && <th>GST%</th>}
               <th>Total</th>
@@ -118,8 +122,10 @@ export default function InvoiceView() {
                 {!isEstimate && <td>{it.hsn_code}</td>}
                 <td>{it.purity}</td>
                 <td>{it.gross_weight.toFixed(3)}</td>
-                <td>{it.pricing_unit === 'carat' ? `${(it.carat_weight || 0).toFixed(3)} ct` : `${it.net_weight.toFixed(3)} g`}</td>
-                <td>₹{it.metal_rate_per_gram.toFixed(2)}/{it.pricing_unit === 'carat' ? 'ct' : 'g'}</td>
+                <td>{it.net_weight.toFixed(3)}</td>
+                <td>₹{it.metal_rate_per_gram.toFixed(2)}</td>
+                <td>{it.diamond_carat > 0 ? `₹${it.diamond_rate_per_carat.toFixed(2)}` : '—'}</td>
+                <td>{it.diamond_carat > 0 ? `${it.diamond_carat}ct${it.diamond_kt ? ` / ${it.diamond_kt}` : ''}` : '—'}</td>
                 <td>₹{it.metal_value.toFixed(2)}</td>
                 <td>{makingPercent(it)}</td>
                 <td>₹{it.stone_charge.toFixed(2)}</td>

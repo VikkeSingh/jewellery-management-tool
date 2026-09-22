@@ -136,9 +136,7 @@ export default function NewOrder() {
                 <select value={selectedPieceId} onChange={(e) => setSelectedPieceId(e.target.value)} disabled={!selectedArticleId}>
                   <option value="">Select piece...</option>
                   {availablePieces.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.tag_number || `#${p.id}`} — {selectedArticle?.metal === 'Diamond' ? `${p.carat_weight || 0}ct` : `${p.net_weight}g`}{p.huid ? ` (HUID ${p.huid})` : ''}
-                    </option>
+                    <option key={p.id} value={p.id}>{p.tag_number || `#${p.id}`} — {p.net_weight}g{p.huid ? ` (HUID ${p.huid})` : ''}</option>
                   ))}
                 </select>
               </div>

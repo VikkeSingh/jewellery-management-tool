@@ -40,13 +40,8 @@ export async function computeInvoiceLines(db, session, settings, opts) {
     const article = await db.collection('articles').findOne({ _id: toObjectId(piece.article_id) }, { session });
     if (!article) throw { status: 404, message: `Article for piece ${item.piece_id} not found` };
 
-    const pricingUnit = article.metal === 'Diamond' ? 'carat' : 'gram';
-    const quantity = pricingUnit === 'carat' ? Number(piece.carat_weight || 0) : piece.net_weight;
-    const defaultRate = pricingUnit === 'carat'
-      ? settings.diamond_rate_per_carat
-      : (article.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram);
-    const rate = Number(item.metal_rate_per_gram ?? defaultRate);
-    const metalValue = round2(rate * quantity);
+    const rate = Number(item.metal_rate_per_gram ?? (article.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram));
+    const metalValue = round2(rate * piece.net_weight);
 
     let makingCharge = 0;
     if (item.making_charge !== undefined) {
@@ -59,8 +54,17 @@ export async function computeInvoiceLines(db, session, settings, opts) {
       makingCharge = article.making_charge_value;
     }
 
+    // Diamond isn't sold on its own — it's set into a gold item, so its
+    // value is entered per line at billing time and folded straight into
+    // the same taxable value (GST is charged on the combined price, not
+    // separately on the diamond portion).
+    const diamondCarat = Number(item.diamond_carat || 0);
+    const diamondRate = Number(item.diamond_rate_per_carat || 0);
+    const diamondValue = round2(diamondCarat * diamondRate);
+    const diamondKt = item.diamond_kt || '';
+
     const stoneCharge = Number(item.stone_charge ?? piece.stone_charge ?? 0);
-    const taxableValue = round2(metalValue + makingCharge + stoneCharge);
+    const taxableValue = round2(metalValue + diamondValue + makingCharge + stoneCharge);
     const gstRate = documentType === 'estimate' ? 0 : Number(item.gst_rate_override ?? article.gst_rate);
 
     let cgst = 0, sgst = 0, igst = 0;
@@ -85,14 +89,15 @@ export async function computeInvoiceLines(db, session, settings, opts) {
       description: article.name,
       hsn_code: article.hsn_code,
       purity: article.purity,
-      metal: article.metal,
-      pricing_unit: pricingUnit,
       gross_weight: piece.gross_weight,
       stone_weight: piece.stone_weight,
       net_weight: piece.net_weight,
-      carat_weight: pricingUnit === 'carat' ? quantity : 0,
       metal_rate_per_gram: rate,
       metal_value: metalValue,
+      diamond_carat: diamondCarat,
+      diamond_rate_per_carat: diamondRate,
+      diamond_kt: diamondKt,
+      diamond_value: diamondValue,
       making_charge: makingCharge,
       stone_charge: stoneCharge,
       taxable_value: taxableValue,

@@ -86,7 +86,6 @@ router.post('/', async (req, res) => {
         piece_id: piece ? String(piece._id) : null,
         article_id: article ? String(article._id) : null,
         article_name: article ? article.name : null,
-        article_metal: article ? article.metal : null,
         description: b.description || '',
         estimated_weight: b.estimated_weight !== undefined && b.estimated_weight !== '' ? Number(b.estimated_weight) : null,
         estimated_amount: round2(estimatedAmount),

@@ -19,11 +19,16 @@ function computeMakingCharge(item, metalValue) {
 
 function computeLine(item, settings, isInterstate, documentType) {
   const rate = Number(item.metal_rate_per_gram);
-  const quantity = item.pricing_unit === 'carat' ? Number(item.piece.carat_weight || 0) : item.piece.net_weight;
-  const metalValue = round2(rate * quantity);
+  const metalValue = round2(rate * item.piece.net_weight);
   const makingCharge = computeMakingCharge(item, metalValue);
+  // Diamond isn't sold on its own — it's set into a gold item, so its value
+  // is added straight into the same taxable value and GST is charged on
+  // the combined price, not separately on the diamond portion.
+  const diamondCarat = Number(item.diamond_carat || 0);
+  const diamondRate = Number(item.diamond_rate_per_carat || 0);
+  const diamondValue = round2(diamondCarat * diamondRate);
   const stoneCharge = Number(item.stone_charge);
-  const taxableValue = round2(metalValue + makingCharge + stoneCharge);
+  const taxableValue = round2(metalValue + diamondValue + makingCharge + stoneCharge);
   const gstRate = documentType === 'estimate' ? 0 : Number(item.gst_rate);
   let cgst = 0, sgst = 0, igst = 0;
   if (documentType === 'tax_invoice') {
@@ -31,7 +36,7 @@ function computeLine(item, settings, isInterstate, documentType) {
     else { cgst = round2(taxableValue * (gstRate / 200)); sgst = round2(taxableValue * (gstRate / 200)); }
   }
   const lineTotal = round2(taxableValue + cgst + sgst + igst);
-  return { metalValue, makingCharge, taxableValue, cgst, sgst, igst, lineTotal };
+  return { metalValue, diamondValue, makingCharge, taxableValue, cgst, sgst, igst, lineTotal };
 }
 
 export default function NewSale() {
@@ -86,20 +91,19 @@ export default function NewSale() {
   function addToCart() {
     const piece = availablePieces.find((p) => String(p.id) === String(selectedPieceId));
     if (!piece || !selectedArticle) return;
-    const pricingUnit = selectedArticle.metal === 'Diamond' ? 'carat' : 'gram';
-    const rate = pricingUnit === 'carat'
-      ? settings.diamond_rate_per_carat
-      : (selectedArticle.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram);
+    const rate = selectedArticle.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram;
 
     setCart([...cart, {
       key: `${piece.id}-${Date.now()}`,
       piece, article: selectedArticle,
-      pricing_unit: pricingUnit,
       metal_rate_per_gram: rate || 0,
       making_charge_mode: selectedArticle.making_charge_type || 'per_gram',
       making_charge_input: selectedArticle.making_charge_value || 0,
       stone_charge: piece.stone_charge || 0,
       gst_rate: selectedArticle.gst_rate,
+      diamond_carat: '',
+      diamond_rate_per_carat: settings.diamond_rate_per_carat || 0,
+      diamond_kt: selectedArticle.purity || '',
     }]);
     setSelectedArticleId('');
     setSelectedPieceId('');
@@ -149,6 +153,9 @@ export default function NewSale() {
             making_charge: line.makingCharge,
             stone_charge: Number(c.stone_charge),
             gst_rate_override: Number(c.gst_rate),
+            diamond_carat: Number(c.diamond_carat || 0),
+            diamond_rate_per_carat: Number(c.diamond_rate_per_carat || 0),
+            diamond_kt: c.diamond_kt || '',
           };
         }),
       });
@@ -244,9 +251,7 @@ export default function NewSale() {
             <select value={selectedPieceId} onChange={(e) => setSelectedPieceId(e.target.value)} disabled={!selectedArticleId}>
               <option value="">Select piece...</option>
               {availablePieces.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.tag_number || `#${p.id}`} — {selectedArticle?.metal === 'Diamond' ? `${p.carat_weight || 0}ct` : `${p.net_weight}g`}{p.huid ? ` (HUID ${p.huid})` : ''}
-                </option>
+                <option key={p.id} value={p.id}>{p.tag_number || `#${p.id}`} — {p.net_weight}g{p.huid ? ` (HUID ${p.huid})` : ''}</option>
               ))}
             </select>
           </div>
@@ -264,7 +269,7 @@ export default function NewSale() {
             <table>
               <thead>
                 <tr>
-                  <th>Item</th><th>Weight/Ct</th><th>Rate</th><th>Making</th><th>Stone chg</th>
+                  <th>Item</th><th>Net Wt</th><th>Rate/g</th><th>Diamond Rate</th><th>Diamond Ct/Kt</th><th>Making</th><th>Stone chg</th>
                   {documentType === 'tax_invoice' && <th>GST%</th>}
                   <th>Taxable</th><th>Total</th><th></th>
                 </tr>
@@ -272,14 +277,27 @@ export default function NewSale() {
               <tbody>
                 {cart.map((item) => {
                   const line = computeLine(item, settings, isInterstate, documentType);
+                  const isGold = item.article.metal === 'Gold';
                   return (
                     <tr key={item.key}>
                       <td>{item.article.name}<div className="cart-meta">{item.piece.tag_number || `#${item.piece.id}`}</div></td>
-                      <td>{item.pricing_unit === 'carat' ? `${(item.piece.carat_weight || 0).toFixed(3)} ct` : `${item.piece.net_weight.toFixed(3)} g`}</td>
-                      <td>
-                        <input type="number" step="0.01" style={{ width: 90 }} value={item.metal_rate_per_gram} onChange={(e) => updateCartItem(item.key, 'metal_rate_per_gram', e.target.value)} />
-                        <div className="cart-meta">₹/{item.pricing_unit === 'carat' ? 'ct' : 'g'}</div>
-                      </td>
+                      <td>{item.piece.net_weight.toFixed(3)}</td>
+                      <td><input type="number" step="0.01" style={{ width: 90 }} value={item.metal_rate_per_gram} onChange={(e) => updateCartItem(item.key, 'metal_rate_per_gram', e.target.value)} /></td>
+                      {isGold ? (
+                        <td>
+                          <input type="number" step="0.01" style={{ width: 90 }} value={item.diamond_rate_per_carat} onChange={(e) => updateCartItem(item.key, 'diamond_rate_per_carat', e.target.value)} placeholder="₹/ct" />
+                          <div className="cart-meta">₹/ct</div>
+                        </td>
+                      ) : <td>—</td>}
+                      {isGold ? (
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <input type="number" step="0.001" style={{ width: 55 }} value={item.diamond_carat} onChange={(e) => updateCartItem(item.key, 'diamond_carat', e.target.value)} placeholder="ct" />
+                            <input type="text" style={{ width: 45 }} value={item.diamond_kt} onChange={(e) => updateCartItem(item.key, 'diamond_kt', e.target.value)} placeholder="kt" />
+                          </div>
+                          {line.diamondValue > 0 && <div className="cart-meta">= ₹{line.diamondValue.toFixed(2)}</div>}
+                        </td>
+                      ) : <td>—</td>}
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <input type="number" step="0.01" style={{ width: 60 }} value={item.making_charge_input} onChange={(e) => updateCartItem(item.key, 'making_charge_input', e.target.value)} />

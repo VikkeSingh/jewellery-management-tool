@@ -68,7 +68,7 @@ export default function Inventory() {
             <thead>
               <tr>
                 <th>Name</th><th>Category</th><th>Metal</th><th>Purity</th>
-                <th>GST %</th><th>Qty</th><th>Net Wt (g) / Carat (ct)</th>
+                <th>GST %</th><th>Qty</th><th>Net Wt (g)</th>
               </tr>
             </thead>
             <tbody>
@@ -83,7 +83,7 @@ export default function Inventory() {
                     <span className={`badge ${a.quantity > 2 ? 'in_stock' : a.quantity > 0 ? 'low' : 'sold'}`}>{a.quantity}</span>
                     {a.reserved_quantity > 0 && <div className="hint">+{a.reserved_quantity} reserved</div>}
                   </td>
-                  <td>{a.metal === 'Diamond' ? `${(a.total_carat_weight || 0).toFixed(2)} ct` : `${a.total_net_weight.toFixed(2)} g`}</td>
+                  <td>{a.total_net_weight.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

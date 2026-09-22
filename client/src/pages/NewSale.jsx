@@ -277,7 +277,7 @@ export default function NewSale() {
               <tbody>
                 {cart.map((item) => {
                   const line = computeLine(item, settings, isInterstate, documentType);
-                  const showDiamondFields = item.article.metal === 'Gold' || item.article.metal === 'Diamond';
+                  const showDiamondFields = item.article.metal === 'Diamond';
                   return (
                     <tr key={item.key}>
                       <td>{item.article.name}<div className="cart-meta">{item.piece.tag_number || `#${item.piece.id}`}</div></td>

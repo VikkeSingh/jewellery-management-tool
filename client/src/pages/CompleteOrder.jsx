@@ -278,19 +278,19 @@ export default function CompleteOrder() {
               <tbody>
                 {cart.map((item) => {
                   const line = computeLine(item, isInterstate, documentType);
-                  const isGold = item.article.metal === 'Gold';
+                  const showDiamondFields = item.article.metal === 'Gold' || item.article.metal === 'Diamond';
                   return (
                     <tr key={item.key}>
                       <td>{item.article.name}<div className="cart-meta">{item.piece.tag_number || `#${item.piece.id}`}</div></td>
                       <td>{item.piece.net_weight.toFixed(3)}</td>
                       <td><input type="number" step="0.01" style={{ width: 90 }} value={item.metal_rate_per_gram} onChange={(e) => updateCartItem(item.key, 'metal_rate_per_gram', e.target.value)} /></td>
-                      {isGold ? (
+                      {showDiamondFields ? (
                         <td>
                           <input type="number" step="0.01" style={{ width: 90 }} value={item.diamond_rate_per_carat} onChange={(e) => updateCartItem(item.key, 'diamond_rate_per_carat', e.target.value)} placeholder="₹/ct" />
                           <div className="cart-meta">₹/ct</div>
                         </td>
                       ) : <td>—</td>}
-                      {isGold ? (
+                      {showDiamondFields ? (
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <input type="number" step="0.001" style={{ width: 55 }} value={item.diamond_carat} onChange={(e) => updateCartItem(item.key, 'diamond_carat', e.target.value)} placeholder="ct" />

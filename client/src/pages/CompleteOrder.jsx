@@ -132,6 +132,7 @@ export default function CompleteOrder() {
 
   const isInterstate = documentType === 'tax_invoice' && !!customer.state && !!settings?.state && customer.state.trim().toLowerCase() !== settings.state.trim().toLowerCase();
   const advanceAmount = order?.advance_amount || 0;
+  const anyDiamondInCart = cart.some((c) => c.article.metal === 'Diamond');
 
   const totals = useMemo(() => {
     if (!settings) return null;
@@ -270,7 +271,9 @@ export default function CompleteOrder() {
             <table>
               <thead>
                 <tr>
-                  <th>Item</th><th>Net Wt</th><th>Rate/g</th><th>Diamond Rate</th><th>Diamond Ct/Kt</th><th>Making</th><th>Stone chg</th>
+                  <th>Item</th><th>Net Wt</th><th>Rate/g</th>
+                  {anyDiamondInCart && <><th>Diamond Rate</th><th>Diamond Ct/Kt</th></>}
+                  <th>Making</th><th>Stone chg</th>
                   {documentType === 'tax_invoice' && <th>GST%</th>}
                   <th>Taxable</th><th>Total</th><th></th>
                 </tr>
@@ -284,13 +287,13 @@ export default function CompleteOrder() {
                       <td>{item.article.name}<div className="cart-meta">{item.piece.tag_number || `#${item.piece.id}`}</div></td>
                       <td>{item.piece.net_weight.toFixed(3)}</td>
                       <td><input type="number" step="0.01" style={{ width: 90 }} value={item.metal_rate_per_gram} onChange={(e) => updateCartItem(item.key, 'metal_rate_per_gram', e.target.value)} /></td>
-                      {showDiamondFields ? (
+                      {anyDiamondInCart && (showDiamondFields ? (
                         <td>
                           <input type="number" step="0.01" style={{ width: 90 }} value={item.diamond_rate_per_carat} onChange={(e) => updateCartItem(item.key, 'diamond_rate_per_carat', e.target.value)} placeholder="₹/ct" />
                           <div className="cart-meta">₹/ct</div>
                         </td>
-                      ) : <td>—</td>}
-                      {showDiamondFields ? (
+                      ) : <td>—</td>)}
+                      {anyDiamondInCart && (showDiamondFields ? (
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <input type="number" step="0.001" style={{ width: 55 }} value={item.diamond_carat} onChange={(e) => updateCartItem(item.key, 'diamond_carat', e.target.value)} placeholder="ct" />
@@ -298,7 +301,7 @@ export default function CompleteOrder() {
                           </div>
                           {line.diamondValue > 0 && <div className="cart-meta">= ₹{line.diamondValue.toFixed(2)}</div>}
                         </td>
-                      ) : <td>—</td>}
+                      ) : <td>—</td>)}
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <input type="number" step="0.01" style={{ width: 60 }} value={item.making_charge_input} onChange={(e) => updateCartItem(item.key, 'making_charge_input', e.target.value)} />

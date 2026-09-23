@@ -33,6 +33,7 @@ export default function InvoiceView() {
   const isCancelled = data.status === 'cancelled';
   const documentType = data.document_type || 'tax_invoice';
   const isEstimate = documentType === 'estimate';
+  const anyDiamondItem = items.some((it) => it.diamond_carat > 0);
 
   return (
     <div>
@@ -86,14 +87,13 @@ export default function InvoiceView() {
         <table className="invoice-items-table">
           <colgroup>
             <col style={{ width: '3%' }} />
-            <col style={{ width: isEstimate ? '22%' : '12%' }} />
+            <col style={{ width: isEstimate ? (anyDiamondItem ? '22%' : '36%') : (anyDiamondItem ? '12%' : '26%') }} />
             {!isEstimate && <col style={{ width: '5%' }} />}
             <col style={{ width: '6%' }} />
             <col style={{ width: '6%' }} />
             <col style={{ width: '6%' }} />
             <col style={{ width: '7%' }} />
-            <col style={{ width: '7%' }} />
-            <col style={{ width: '7%' }} />
+            {anyDiamondItem && <><col style={{ width: '7%' }} /><col style={{ width: '7%' }} /></>}
             <col style={{ width: '7%' }} />
             <col style={{ width: '7%' }} />
             <col style={{ width: '6%' }} />
@@ -107,7 +107,7 @@ export default function InvoiceView() {
               {!isEstimate && <th>HSN</th>}
               <th>Purity</th>
               <th>Gross (g)</th><th>Net (g)</th><th>Rate/g</th>
-              <th>Diamond Rate</th><th>Diamond Ct/Kt</th>
+              {anyDiamondItem && <><th>Diamond Rate</th><th>Diamond Ct/Kt</th></>}
               <th>Metal Val.</th>
               <th>Making %</th><th>Stone</th><th>{isEstimate ? 'Amount' : 'Taxable'}</th>
               {!isEstimate && <th>GST%</th>}
@@ -124,8 +124,12 @@ export default function InvoiceView() {
                 <td>{it.gross_weight.toFixed(3)}</td>
                 <td>{it.net_weight.toFixed(3)}</td>
                 <td>₹{it.metal_rate_per_gram.toFixed(2)}</td>
-                <td>{it.diamond_carat > 0 ? `₹${it.diamond_rate_per_carat.toFixed(2)}` : '—'}</td>
-                <td>{it.diamond_carat > 0 ? `${it.diamond_carat}ct${it.diamond_kt ? ` / ${it.diamond_kt}` : ''}` : '—'}</td>
+                {anyDiamondItem && (
+                  <>
+                    <td>{it.diamond_carat > 0 ? `₹${it.diamond_rate_per_carat.toFixed(2)}` : '—'}</td>
+                    <td>{it.diamond_carat > 0 ? `${it.diamond_carat}ct${it.diamond_kt ? ` / ${it.diamond_kt}` : ''}` : '—'}</td>
+                  </>
+                )}
                 <td>₹{it.metal_value.toFixed(2)}</td>
                 <td>{makingPercent(it)}</td>
                 <td>₹{it.stone_charge.toFixed(2)}</td>

@@ -23,6 +23,7 @@ export default function NewOrder() {
 
   const [description, setDescription] = useState('');
   const [estimatedWeight, setEstimatedWeight] = useState('');
+  const [purity, setPurity] = useState('');
 
   const [customerQuery, setCustomerQuery] = useState('');
   const [customerResults, setCustomerResults] = useState([]);
@@ -88,6 +89,14 @@ export default function NewOrder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedArticleId, settings]);
 
+  // Prefill purity from the selected article, without clobbering anything
+  // the user already typed in.
+  useEffect(() => {
+    if (purity !== '' || !selectedArticle) return;
+    if (selectedArticle.purity) setPurity(selectedArticle.purity);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArticleId]);
+
   // Keep the estimate in sync when the underlying weight changes (piece
   // switched, or custom weight edited), as long as a rate has been entered.
   useEffect(() => {
@@ -111,6 +120,7 @@ export default function NewOrder() {
         customer,
         piece_id: mode === 'existing' ? selectedPieceId : undefined,
         description: mode === 'custom' ? description.trim() : '',
+        purity: purity || '',
         estimated_weight: mode === 'custom' && estimatedWeight !== '' ? Number(estimatedWeight) : undefined,
         estimated_amount: Number(estimatedAmount),
         advance_amount: Number(advanceAmount || 0),
@@ -195,6 +205,10 @@ export default function NewOrder() {
                   ))}
                 </select>
               </div>
+              <div className="field" style={{ maxWidth: 200 }}>
+                <label>Purity</label>
+                <input value={purity} onChange={(e) => setPurity(e.target.value)} placeholder="22K / 18K / 916 / 999" />
+              </div>
               {selectedPiece && (
                 <p className="hint" style={{ gridColumn: '1 / -1' }}>
                   This piece will be marked "reserved" and won't be available for another sale until this order is completed or cancelled.
@@ -208,9 +222,15 @@ export default function NewOrder() {
               <label>Description *</label>
               <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Gold chain, 10g approx, rope design" />
             </div>
-            <div className="field" style={{ maxWidth: 240 }}>
-              <label>Estimated weight (g, optional)</label>
-              <input type="number" step="0.001" value={estimatedWeight} onChange={(e) => setEstimatedWeight(e.target.value)} />
+            <div className="grid cols-2" style={{ maxWidth: 400 }}>
+              <div className="field">
+                <label>Estimated weight (g, optional)</label>
+                <input type="number" step="0.001" value={estimatedWeight} onChange={(e) => setEstimatedWeight(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Purity</label>
+                <input value={purity} onChange={(e) => setPurity(e.target.value)} placeholder="22K / 18K / 916 / 999" />
+              </div>
             </div>
           </div>
         )}

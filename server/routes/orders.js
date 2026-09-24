@@ -87,6 +87,7 @@ router.post('/', async (req, res) => {
         article_id: article ? String(article._id) : null,
         article_name: article ? article.name : null,
         description: b.description || '',
+        purity: b.purity || (article ? article.purity : '') || '',
         estimated_weight: b.estimated_weight !== undefined && b.estimated_weight !== '' ? Number(b.estimated_weight) : null,
         estimated_amount: round2(estimatedAmount),
         advance_amount: advanceAmount,

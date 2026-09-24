@@ -80,7 +80,7 @@ export default function OrderReceiptView() {
           <tbody>
             <tr>
               <td>{piece ? data.article_name : data.description}</td>
-              <td>{piece ? piece.purity || '—' : '—'}</td>
+              <td>{data.purity || '—'}</td>
               <td>{piece ? piece.net_weight.toFixed(3) : (data.estimated_weight != null ? data.estimated_weight : '—')}</td>
             </tr>
           </tbody>

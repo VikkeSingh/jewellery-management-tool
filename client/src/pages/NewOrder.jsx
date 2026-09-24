@@ -2,8 +2,19 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 
+function computeEstimate(weight, rate, makingPct) {
+  const w = Number(weight || 0);
+  const r = Number(rate || 0);
+  const pct = Number(makingPct || 0);
+  if (!(w > 0) || !(r > 0)) return null;
+  const metalValue = w * r;
+  const making = metalValue * (pct / 100);
+  return Math.round((metalValue + making) * 100) / 100;
+}
+
 export default function NewOrder() {
   const navigate = useNavigate();
+  const [settings, setSettings] = useState(null);
   const [mode, setMode] = useState('existing'); // 'existing' | 'custom'
   const [articles, setArticles] = useState([]);
   const [selectedArticleId, setSelectedArticleId] = useState('');
@@ -17,6 +28,8 @@ export default function NewOrder() {
   const [customerResults, setCustomerResults] = useState([]);
   const [customer, setCustomer] = useState({ id: null, name: '', phone: '', address: '', state: '', gstin: '' });
 
+  const [rate, setRate] = useState('');
+  const [makingPercent, setMakingPercent] = useState('');
   const [estimatedAmount, setEstimatedAmount] = useState('');
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [advancePaymentMode, setAdvancePaymentMode] = useState('Cash');
@@ -25,6 +38,7 @@ export default function NewOrder() {
 
   useEffect(() => {
     api.articles.list().then(setArticles);
+    api.settings.get().then(setSettings);
   }, []);
 
   useEffect(() => {
@@ -40,6 +54,47 @@ export default function NewOrder() {
 
   const selectedArticle = articles.find((a) => String(a.id) === String(selectedArticleId));
   const selectedPiece = availablePieces.find((p) => String(p.id) === String(selectedPieceId));
+  const rateUnit = selectedArticle?.metal === 'Diamond' ? 'ct' : 'g';
+
+  function currentWeight() {
+    if (mode === 'existing' && selectedPiece) return selectedPiece.net_weight;
+    if (mode === 'custom' && estimatedWeight !== '') return Number(estimatedWeight);
+    return null;
+  }
+
+  function recomputeEstimate(nextRate, nextMakingPercent) {
+    const est = computeEstimate(currentWeight(), nextRate, nextMakingPercent);
+    if (est !== null) setEstimatedAmount(est);
+  }
+
+  function handleRateChange(value) {
+    setRate(value);
+    recomputeEstimate(value, makingPercent);
+  }
+
+  function handleMakingPercentChange(value) {
+    setMakingPercent(value);
+    recomputeEstimate(rate, value);
+  }
+
+  // Prefill a sensible starting rate from today's settings once a piece/article
+  // is picked, without clobbering a rate the user already typed in.
+  useEffect(() => {
+    if (rate !== '' || !settings || !selectedArticle) return;
+    const defaultRate = selectedArticle.metal === 'Diamond'
+      ? settings.diamond_rate_per_carat
+      : (selectedArticle.metal === 'Silver' ? settings.silver_rate_per_gram : settings.gold_rate_per_gram);
+    if (defaultRate) handleRateChange(defaultRate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArticleId, settings]);
+
+  // Keep the estimate in sync when the underlying weight changes (piece
+  // switched, or custom weight edited), as long as a rate has been entered.
+  useEffect(() => {
+    if (rate === '') return;
+    recomputeEstimate(rate, makingPercent);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPieceId, estimatedWeight]);
 
   async function submit(e) {
     e.preventDefault();
@@ -163,6 +218,17 @@ export default function NewOrder() {
 
       <div className="card">
         <h3>Advance payment</h3>
+        <div className="grid cols-2">
+          <div className="field">
+            <label>Rate (₹ per {rateUnit})</label>
+            <input type="number" step="0.01" value={rate} onChange={(e) => handleRateChange(e.target.value)} />
+            <p className="hint">Optional — fills in the estimate below from weight × rate + making %.</p>
+          </div>
+          <div className="field">
+            <label>Making charge (%)</label>
+            <input type="number" step="0.01" value={makingPercent} onChange={(e) => handleMakingPercentChange(e.target.value)} />
+          </div>
+        </div>
         <div className="grid cols-3">
           <div className="field">
             <label>Estimated total amount (₹) *</label>

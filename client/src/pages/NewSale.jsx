@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client.js';
+import AddArticleModal from '../components/AddArticleModal.jsx';
 
 function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 
@@ -48,6 +49,7 @@ export default function NewSale() {
   const [availablePieces, setAvailablePieces] = useState([]);
   const [selectedPieceId, setSelectedPieceId] = useState('');
   const [cart, setCart] = useState([]);
+  const [showAddArticle, setShowAddArticle] = useState(false);
 
   const [customerQuery, setCustomerQuery] = useState('');
   const [customerResults, setCustomerResults] = useState([]);
@@ -115,6 +117,13 @@ export default function NewSale() {
 
   function removeFromCart(key) {
     setCart(cart.filter((c) => c.key !== key));
+  }
+
+  function handleArticleCreated({ article, piece }) {
+    setArticles((prev) => [...prev, article]);
+    setSelectedArticleId(article.id);
+    setSelectedPieceId(piece.id);
+    setShowAddArticle(false);
   }
 
   const isInterstate = documentType === 'tax_invoice' && !!customer.state && !!settings?.state && customer.state.trim().toLowerCase() !== settings.state.trim().toLowerCase();
@@ -226,15 +235,18 @@ export default function NewSale() {
       </div>
 
       <div className="card">
-        <h3>Add item</h3>
+        <div className="page-header" style={{ marginBottom: articles.length === 0 || articles.every((a) => a.quantity === 0) ? 8 : 0 }}>
+          <h3 style={{ margin: 0 }}>Add item</h3>
+          <button type="button" className="secondary small" onClick={() => setShowAddArticle(true)}>+ New Article</button>
+        </div>
         {articles.length === 0 ? (
           <p className="hint">
-            You haven't added any articles yet. Go to <Link to="/inventory">Inventory</Link> to create one.
+            You haven't added any articles yet. Click "+ New Article" above, or go to <Link to="/inventory">Inventory</Link>.
           </p>
         ) : articles.every((a) => a.quantity === 0) ? (
           <p className="hint">
-            None of your articles have stock yet. Open an article in <Link to="/inventory">Inventory</Link> and
-            use "Add Stock" to add pieces before billing them.
+            None of your articles have stock yet. Click "+ New Article" above to add one with its first piece, or open
+            an existing article in <Link to="/inventory">Inventory</Link> and use "Add Stock".
           </p>
         ) : null}
         <div className="grid cols-3">
@@ -366,6 +378,10 @@ export default function NewSale() {
           </button>
         </div>
       </div>
+
+      {showAddArticle && (
+        <AddArticleModal onClose={() => setShowAddArticle(false)} onCreated={handleArticleCreated} />
+      )}
     </div>
   );
 }

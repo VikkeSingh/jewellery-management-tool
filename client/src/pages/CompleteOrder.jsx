@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { api } from '../api/client.js';
+import AddArticleModal from '../components/AddArticleModal.jsx';
 
 function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 
@@ -51,6 +52,7 @@ export default function CompleteOrder() {
   const [selectedPieceId, setSelectedPieceId] = useState('');
   const [cart, setCart] = useState([]);
   const [seeded, setSeeded] = useState(false);
+  const [showAddArticle, setShowAddArticle] = useState(false);
 
   const [customer, setCustomer] = useState({ id: null, name: '', phone: '', address: '', state: '', gstin: '' });
   const [discount, setDiscount] = useState(0);
@@ -128,6 +130,13 @@ export default function CompleteOrder() {
 
   function removeFromCart(key) {
     setCart(cart.filter((c) => c.key !== key));
+  }
+
+  function handleArticleCreated({ article, piece }) {
+    setArticles((prev) => [...prev, article]);
+    setSelectedArticleId(article.id);
+    setSelectedPieceId(piece.id);
+    setShowAddArticle(false);
   }
 
   const isInterstate = documentType === 'tax_invoice' && !!customer.state && !!settings?.state && customer.state.trim().toLowerCase() !== settings.state.trim().toLowerCase();
@@ -235,7 +244,10 @@ export default function CompleteOrder() {
       </div>
 
       <div className="card">
-        <h3>Add another item (optional)</h3>
+        <div className="page-header" style={{ marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>Add another item (optional)</h3>
+          <button type="button" className="secondary small" onClick={() => setShowAddArticle(true)}>+ New Article</button>
+        </div>
         <div className="grid cols-3">
           <div className="field">
             <label>Article</label>
@@ -364,6 +376,10 @@ export default function CompleteOrder() {
           </button>
         </div>
       </div>
+
+      {showAddArticle && (
+        <AddArticleModal onClose={() => setShowAddArticle(false)} onCreated={handleArticleCreated} />
+      )}
     </div>
   );
 }

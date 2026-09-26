@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client.js';
+import AddArticleModal from '../components/AddArticleModal.jsx';
 
 function computeEstimate(weight, rate, makingPct) {
   const w = Number(weight || 0);
@@ -20,6 +21,7 @@ export default function NewOrder() {
   const [selectedArticleId, setSelectedArticleId] = useState('');
   const [availablePieces, setAvailablePieces] = useState([]);
   const [selectedPieceId, setSelectedPieceId] = useState('');
+  const [showAddArticle, setShowAddArticle] = useState(false);
 
   const [description, setDescription] = useState('');
   const [estimatedWeight, setEstimatedWeight] = useState('');
@@ -76,6 +78,14 @@ export default function NewOrder() {
   function handleMakingPercentChange(value) {
     setMakingPercent(value);
     recomputeEstimate(rate, value);
+  }
+
+  function handleArticleCreated({ article, piece }) {
+    setArticles((prev) => [...prev, article]);
+    setMode('existing');
+    setSelectedArticleId(article.id);
+    setSelectedPieceId(piece.id);
+    setShowAddArticle(false);
   }
 
   // Prefill a sensible starting rate from today's settings once a piece/article
@@ -170,7 +180,10 @@ export default function NewOrder() {
       </div>
 
       <div className="card">
-        <h3>What is being ordered?</h3>
+        <div className="page-header" style={{ marginBottom: 14 }}>
+          <h3 style={{ margin: 0 }}>What is being ordered?</h3>
+          <button type="button" className="secondary small" onClick={() => setShowAddArticle(true)}>+ New Article</button>
+        </div>
         <div style={{ display: 'flex', gap: 20, marginBottom: 14 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
             <input type="radio" name="mode" checked={mode === 'existing'} onChange={() => setMode('existing')} style={{ width: 'auto' }} />
@@ -184,7 +197,10 @@ export default function NewOrder() {
 
         {mode === 'existing' ? (
           articles.length === 0 || articles.every((a) => a.quantity === 0) ? (
-            <p className="hint">No articles have stock right now. Add stock in <Link to="/inventory">Inventory</Link>, or switch to a custom order above.</p>
+            <p className="hint">
+              No articles have stock right now. Click "+ New Article" above to add one with its first piece, add
+              stock in <Link to="/inventory">Inventory</Link>, or switch to a custom order above.
+            </p>
           ) : (
             <div className="grid cols-2">
               <div className="field">
@@ -274,6 +290,10 @@ export default function NewOrder() {
           <button onClick={submit} disabled={submitting}>{submitting ? 'Creating...' : 'Create Order & Print Advance Receipt'}</button>
         </div>
       </div>
+
+      {showAddArticle && (
+        <AddArticleModal onClose={() => setShowAddArticle(false)} onCreated={handleArticleCreated} />
+      )}
     </div>
   );
 }

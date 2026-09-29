@@ -133,7 +133,13 @@ export default function CompleteOrder() {
   }
 
   function handleArticleCreated({ article, piece }) {
-    setArticles((prev) => [...prev, article]);
+    setArticles((prev) => {
+      const idx = prev.findIndex((a) => a.id === article.id);
+      if (idx === -1) return [...prev, article];
+      const next = [...prev];
+      next[idx] = article;
+      return next;
+    });
     setSelectedArticleId(article.id);
     setSelectedPieceId(piece.id);
     setShowAddArticle(false);

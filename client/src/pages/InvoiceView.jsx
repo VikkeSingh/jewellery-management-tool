@@ -12,6 +12,7 @@ export default function InvoiceView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [makingDisplay, setMakingDisplay] = useState('percent'); // 'percent' | 'amount'
 
   function load() {
     api.invoices.get(id).then(setData);
@@ -40,6 +41,12 @@ export default function InvoiceView() {
       <div className="print-actions no-print">
         <button className="secondary" onClick={() => navigate('/invoices')}>← All Invoices</button>
         <div className="spacer" />
+        <button
+          className="secondary"
+          onClick={() => setMakingDisplay((m) => (m === 'percent' ? 'amount' : 'percent'))}
+        >
+          Making charge: {makingDisplay === 'percent' ? '%' : '₹'} (click to show {makingDisplay === 'percent' ? '₹' : '%'})
+        </button>
         {!isCancelled && <button className="danger" onClick={cancelInvoice}>Cancel Invoice</button>}
         <button onClick={() => window.print()}>Print / Save PDF</button>
       </div>
@@ -109,7 +116,7 @@ export default function InvoiceView() {
               <th>Gross (g)</th><th>Net (g)</th><th>Rate/g</th>
               {anyDiamondItem && <><th>Diamond Rate</th><th>Diamond Ct/Kt</th></>}
               <th>Metal Val.</th>
-              <th>Making %</th><th>Stone</th><th>{isEstimate ? 'Amount' : 'Taxable'}</th>
+              <th>Making {makingDisplay === 'percent' ? '%' : '(₹)'}</th><th>Stone</th><th>{isEstimate ? 'Amount' : 'Taxable'}</th>
               {!isEstimate && <th>GST%</th>}
               <th>Total</th>
             </tr>
@@ -131,7 +138,7 @@ export default function InvoiceView() {
                   </>
                 )}
                 <td>₹{it.metal_value.toFixed(2)}</td>
-                <td>{makingPercent(it)}</td>
+                <td>{makingDisplay === 'percent' ? makingPercent(it) : `₹${it.making_charge.toFixed(2)}`}</td>
                 <td>₹{it.stone_charge.toFixed(2)}</td>
                 <td>₹{it.taxable_value.toFixed(2)}</td>
                 {!isEstimate && <td>{it.gst_rate}%</td>}

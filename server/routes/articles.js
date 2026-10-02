@@ -62,6 +62,7 @@ router.post('/', async (req, res) => {
     making_charge_value: Number(b.making_charge_value ?? 0),
     gst_rate: Number(b.gst_rate ?? 3),
     notes: b.notes || '',
+    show_purity: b.show_purity !== false,
     created_at: new Date().toISOString(),
     is_active: true,
   };
@@ -83,7 +84,7 @@ router.put('/:id', async (req, res) => {
   const db = await getDb();
   const existing = await db.collection('articles').findOne({ _id: toObjectId(req.params.id) });
   if (!existing) return res.status(404).json({ error: 'Article not found' });
-  const fields = ['name', 'category', 'metal', 'purity', 'hsn_code', 'making_charge_type', 'making_charge_value', 'gst_rate', 'notes'];
+  const fields = ['name', 'category', 'metal', 'purity', 'hsn_code', 'making_charge_type', 'making_charge_value', 'gst_rate', 'notes', 'show_purity'];
   const update = {};
   const b = req.body || {};
   for (const f of fields) if (b[f] !== undefined) update[f] = b[f];

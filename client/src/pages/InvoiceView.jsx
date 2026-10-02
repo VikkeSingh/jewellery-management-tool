@@ -8,6 +8,14 @@ function makingPercent(it) {
   return `${((it.making_charge / it.metal_value) * 100).toFixed(2)}%`;
 }
 
+// Base % width of every always-present column (everything except
+// Description, Purity, and the two Diamond columns), per document type.
+function descriptionWidth(isEstimate, anyDiamondItem, anyPurityItem) {
+  const base = isEstimate ? 58 : 68;
+  const extra = (anyPurityItem ? 6 : 0) + (anyDiamondItem ? 14 : 0);
+  return `${100 - base - extra}%`;
+}
+
 export default function InvoiceView() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -35,6 +43,7 @@ export default function InvoiceView() {
   const documentType = data.document_type || 'tax_invoice';
   const isEstimate = documentType === 'estimate';
   const anyDiamondItem = items.some((it) => it.diamond_carat > 0);
+  const anyPurityItem = items.some((it) => it.purity);
 
   return (
     <div>
@@ -94,9 +103,9 @@ export default function InvoiceView() {
         <table className="invoice-items-table">
           <colgroup>
             <col style={{ width: '3%' }} />
-            <col style={{ width: isEstimate ? (anyDiamondItem ? '22%' : '36%') : (anyDiamondItem ? '12%' : '26%') }} />
+            <col style={{ width: descriptionWidth(isEstimate, anyDiamondItem, anyPurityItem) }} />
             {!isEstimate && <col style={{ width: '5%' }} />}
-            <col style={{ width: '6%' }} />
+            {anyPurityItem && <col style={{ width: '6%' }} />}
             <col style={{ width: '6%' }} />
             <col style={{ width: '6%' }} />
             <col style={{ width: '7%' }} />
@@ -112,7 +121,7 @@ export default function InvoiceView() {
             <tr>
               <th>#</th><th>Description</th>
               {!isEstimate && <th>HSN</th>}
-              <th>Purity</th>
+              {anyPurityItem && <th>Purity</th>}
               <th>Gross (g)</th><th>Net (g)</th><th>Rate/g</th>
               {anyDiamondItem && <><th>Diamond Rate</th><th>Diamond Ct/Kt</th></>}
               <th>Metal Val.</th>
@@ -127,7 +136,7 @@ export default function InvoiceView() {
                 <td>{idx + 1}</td>
                 <td>{it.description}</td>
                 {!isEstimate && <td>{it.hsn_code}</td>}
-                <td>{it.purity}</td>
+                {anyPurityItem && <td>{it.purity}</td>}
                 <td>{it.gross_weight.toFixed(3)}</td>
                 <td>{it.net_weight.toFixed(3)}</td>
                 <td>₹{it.metal_rate_per_gram.toFixed(2)}</td>

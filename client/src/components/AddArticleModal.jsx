@@ -5,9 +5,17 @@ import Modal from './Modal.jsx';
 const METALS = ['Gold', 'Silver', 'Platinum', 'Diamond'];
 
 const emptyForm = {
-  name: '', category: '', metal: 'Gold', purity: '22K', hsn_code: '7113', gst_rate: 3, sku: '', notes: '',
+  name: '', category: '', metal: 'Gold', purity: '', hsn_code: '7113', gst_rate: 3, sku: '', notes: '',
+  show_purity: true,
   tag_number: '', huid: '', gross_weight: '', stone_weight: '', stone_charge: '', cost_price: '',
 };
+
+function purityPlaceholder(metal) {
+  if (metal === 'Gold') return '22K / 18K / 916 / 999';
+  if (metal === 'Silver') return '925 / 999 (optional)';
+  if (metal === 'Platinum') return '950 (optional)';
+  return 'Optional — leave blank if not applicable';
+}
 
 /**
  * Either creates a brand-new article AND its first physical piece, or adds
@@ -60,6 +68,7 @@ export default function AddArticleModal({ onClose, onCreated }) {
           gst_rate: form.gst_rate,
           sku: form.sku,
           notes: form.notes,
+          show_purity: form.show_purity,
         });
         articleId = article.id;
       }
@@ -145,13 +154,20 @@ export default function AddArticleModal({ onClose, onCreated }) {
               </div>
               <div className="field">
                 <label>Metal</label>
-                <select value={form.metal} onChange={(e) => setForm({ ...form, metal: e.target.value })}>
+                <select
+                  value={form.metal}
+                  onChange={(e) => setForm({ ...form, metal: e.target.value, show_purity: e.target.value !== 'Silver' })}
+                >
                   {METALS.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
               <div className="field">
-                <label>Purity</label>
-                <input value={form.purity} onChange={(e) => setForm({ ...form, purity: e.target.value })} placeholder="22K / 18K / 916 / 999" />
+                <label>Purity (optional)</label>
+                <input value={form.purity} onChange={(e) => setForm({ ...form, purity: e.target.value })} placeholder={purityPlaceholder(form.metal)} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.show_purity} onChange={(e) => setForm({ ...form, show_purity: e.target.checked })} style={{ width: 'auto' }} />
+                  <span className="hint" style={{ margin: 0 }}>Show purity on invoices</span>
+                </label>
               </div>
               <div className="field">
                 <label>HSN code</label>

@@ -13,6 +13,13 @@ function computeEstimate(weight, rate, makingPct) {
   return Math.round((metalValue + making) * 100) / 100;
 }
 
+function purityPlaceholder(metal) {
+  if (metal === 'Gold') return '22K / 18K / 916 / 999';
+  if (metal === 'Silver') return '925 / 999 (optional)';
+  if (metal === 'Platinum') return '950 (optional)';
+  return 'Optional — leave blank if not applicable';
+}
+
 export default function NewOrder() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState(null);
@@ -228,8 +235,8 @@ export default function NewOrder() {
                 </select>
               </div>
               <div className="field" style={{ maxWidth: 200 }}>
-                <label>Purity</label>
-                <input value={purity} onChange={(e) => setPurity(e.target.value)} placeholder="22K / 18K / 916 / 999" />
+                <label>Purity (optional)</label>
+                <input value={purity} onChange={(e) => setPurity(e.target.value)} placeholder={purityPlaceholder(selectedArticle?.metal)} />
               </div>
               {selectedPiece && (
                 <p className="hint" style={{ gridColumn: '1 / -1' }}>
@@ -250,8 +257,8 @@ export default function NewOrder() {
                 <input type="number" step="0.001" value={estimatedWeight} onChange={(e) => setEstimatedWeight(e.target.value)} />
               </div>
               <div className="field">
-                <label>Purity</label>
-                <input value={purity} onChange={(e) => setPurity(e.target.value)} placeholder="22K / 18K / 916 / 999" />
+                <label>Purity (optional)</label>
+                <input value={purity} onChange={(e) => setPurity(e.target.value)} placeholder={purityPlaceholder()} />
               </div>
             </div>
           </div>

@@ -88,7 +88,10 @@ export async function computeInvoiceLines(db, session, settings, opts) {
       article_id: String(article._id),
       description: article.name,
       hsn_code: article.hsn_code,
-      purity: article.purity,
+      // Some shops keep a purity value on the article for their own records
+      // (e.g. silver sold by weight, not purity-graded for the customer) but
+      // don't want it printed on the bill — respect that per article.
+      purity: article.show_purity === false ? '' : (article.purity || ''),
       gross_weight: piece.gross_weight,
       stone_weight: piece.stone_weight,
       net_weight: piece.net_weight,

@@ -3,15 +3,26 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import Modal from '../components/Modal.jsx';
 
+const METALS = ['Gold', 'Silver', 'Platinum', 'Diamond'];
 const emptyPiece = { tag_number: '', huid: '', gross_weight: '', stone_weight: '', stone_charge: '', cost_price: '' };
+
+function purityPlaceholder(metal) {
+  if (metal === 'Gold') return '22K / 18K / 916 / 999';
+  if (metal === 'Silver') return '925 / 999 (optional)';
+  if (metal === 'Platinum') return '950 (optional)';
+  return 'Optional — leave blank if not applicable';
+}
 
 export default function ArticleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [article, setArticle] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState(null);
   const [piece, setPiece] = useState(emptyPiece);
   const [error, setError] = useState('');
+  const [editError, setEditError] = useState('');
 
   function load() {
     api.articles.get(id).then(setArticle);
@@ -62,6 +73,34 @@ export default function ArticleDetail() {
     }
   }
 
+  function openEdit() {
+    setEditForm({
+      name: article.name,
+      category: article.category || '',
+      metal: article.metal,
+      purity: article.purity || '',
+      hsn_code: article.hsn_code || '',
+      gst_rate: article.gst_rate,
+      sku: article.sku || '',
+      notes: article.notes || '',
+      show_purity: article.show_purity !== false,
+    });
+    setEditError('');
+    setShowEdit(true);
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    setEditError('');
+    try {
+      await api.articles.update(id, editForm);
+      setShowEdit(false);
+      load();
+    } catch (err) {
+      setEditError(err.message);
+    }
+  }
+
   if (!article) return <p>Loading...</p>;
 
   const inStock = article.pieces.filter((p) => p.status === 'in_stock');
@@ -76,13 +115,20 @@ export default function ArticleDetail() {
           <h2 style={{ margin: '4px 0 0' }}>{article.name}</h2>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
+          <button className="secondary" onClick={openEdit}>Edit Article</button>
           <button onClick={() => setShowAdd(true)}>+ Add Stock (Piece)</button>
           <button className="danger" onClick={deleteArticle}>Delete Article</button>
         </div>
       </div>
 
       <div className="grid cols-4">
-        <div className="card stat"><div className="value">{article.metal}</div><div className="label">Metal / {article.purity || '—'}</div></div>
+        <div className="card stat">
+          <div className="value">{article.metal}</div>
+          <div className="label">
+            Metal / {article.purity || '—'}
+            {article.purity && article.show_purity === false && <div className="hint">hidden on invoices</div>}
+          </div>
+        </div>
         <div className="card stat"><div className="value">{inStock.length}</div><div className="label">Pieces in stock{reserved.length > 0 ? ` (+${reserved.length} reserved)` : ''}</div></div>
         <div className="card stat"><div className="value">{article.gst_rate}%</div><div className="label">GST rate</div></div>
         <div className="card stat"><div className="value">{article.making_charge_type === 'per_gram' ? `₹${article.making_charge_value}/g` : article.making_charge_type === 'percentage' ? `${article.making_charge_value}%` : `₹${article.making_charge_value}`}</div><div className="label">Making charge</div></div>
@@ -164,6 +210,62 @@ export default function ArticleDetail() {
             <div className="modal-actions">
               <button type="button" className="secondary" onClick={() => setShowAdd(false)}>Cancel</button>
               <button type="submit">Add to Stock</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {showEdit && editForm && (
+        <Modal title={`Edit — ${article.name}`} onClose={() => setShowEdit(false)}>
+          <form onSubmit={saveEdit}>
+            <div className="field">
+              <label>Article name *</label>
+              <input required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div className="grid cols-2">
+              <div className="field">
+                <label>Category</label>
+                <input value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>SKU (optional)</label>
+                <input value={editForm.sku} onChange={(e) => setEditForm({ ...editForm, sku: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Metal</label>
+                <select
+                  value={editForm.metal}
+                  onChange={(e) => setEditForm({ ...editForm, metal: e.target.value })}
+                >
+                  {METALS.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Purity (optional)</label>
+                <input value={editForm.purity} onChange={(e) => setEditForm({ ...editForm, purity: e.target.value })} placeholder={purityPlaceholder(editForm.metal)} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={editForm.show_purity} onChange={(e) => setEditForm({ ...editForm, show_purity: e.target.checked })} style={{ width: 'auto' }} />
+                  <span className="hint" style={{ margin: 0 }}>Show purity on invoices</span>
+                </label>
+              </div>
+              <div className="field">
+                <label>HSN code</label>
+                <input value={editForm.hsn_code} onChange={(e) => setEditForm({ ...editForm, hsn_code: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>GST rate (%)</label>
+                <input type="number" step="0.01" value={editForm.gst_rate} onChange={(e) => setEditForm({ ...editForm, gst_rate: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div className="field">
+              <label>Notes</label>
+              <textarea rows={2} value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+            </div>
+            <p className="hint">Changes apply going forward — already-issued invoices keep whatever purity they were printed with.</p>
+            {editError && <div className="error-text">{editError}</div>}
+            <div className="modal-actions">
+              <button type="button" className="secondary" onClick={() => setShowEdit(false)}>Cancel</button>
+              <button type="submit">Save Changes</button>
             </div>
           </form>
         </Modal>

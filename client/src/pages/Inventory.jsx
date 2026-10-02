@@ -6,9 +6,16 @@ import Modal from '../components/Modal.jsx';
 const METALS = ['Gold', 'Silver', 'Platinum', 'Diamond'];
 
 const emptyForm = {
-  name: '', category: '', metal: 'Gold', purity: '22K', hsn_code: '7113',
-  gst_rate: 3, sku: '', notes: '',
+  name: '', category: '', metal: 'Gold', purity: '', hsn_code: '7113',
+  gst_rate: 3, sku: '', notes: '', show_purity: true,
 };
+
+function purityPlaceholder(metal) {
+  if (metal === 'Gold') return '22K / 18K / 916 / 999';
+  if (metal === 'Silver') return '925 / 999 (optional)';
+  if (metal === 'Platinum') return '950 (optional)';
+  return 'Optional — leave blank if not applicable';
+}
 
 export default function Inventory() {
   const [articles, setArticles] = useState([]);
@@ -25,6 +32,13 @@ export default function Inventory() {
   }
 
   useEffect(load, []);
+
+  function handleMetalChange(metal) {
+    // Silver is commonly sold by weight without a customer-facing purity
+    // grade, so default the invoice toggle off for it — still fully
+    // overridable with the checkbox below.
+    setForm((f) => ({ ...f, metal, show_purity: metal !== 'Silver' }));
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -77,7 +91,10 @@ export default function Inventory() {
                   <td><Link to={`/inventory/${a.id}`}>{a.name}</Link>{a.sku ? <div className="hint">SKU: {a.sku}</div> : null}</td>
                   <td>{a.category || '—'}</td>
                   <td>{a.metal}</td>
-                  <td>{a.purity || '—'}</td>
+                  <td>
+                    {a.purity || '—'}
+                    {a.purity && a.show_purity === false && <div className="hint">hidden on invoices</div>}
+                  </td>
                   <td>{a.gst_rate}%</td>
                   <td>
                     <span className={`badge ${a.quantity > 2 ? 'in_stock' : a.quantity > 0 ? 'low' : 'sold'}`}>{a.quantity}</span>
@@ -109,13 +126,17 @@ export default function Inventory() {
               </div>
               <div className="field">
                 <label>Metal</label>
-                <select value={form.metal} onChange={(e) => setForm({ ...form, metal: e.target.value })}>
+                <select value={form.metal} onChange={(e) => handleMetalChange(e.target.value)}>
                   {METALS.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
               <div className="field">
-                <label>Purity</label>
-                <input value={form.purity} onChange={(e) => setForm({ ...form, purity: e.target.value })} placeholder="22K / 18K / 916 / 999" />
+                <label>Purity (optional)</label>
+                <input value={form.purity} onChange={(e) => setForm({ ...form, purity: e.target.value })} placeholder={purityPlaceholder(form.metal)} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.show_purity} onChange={(e) => setForm({ ...form, show_purity: e.target.checked })} style={{ width: 'auto' }} />
+                  <span className="hint" style={{ margin: 0 }}>Show purity on invoices</span>
+                </label>
               </div>
               <div className="field">
                 <label>HSN code</label>

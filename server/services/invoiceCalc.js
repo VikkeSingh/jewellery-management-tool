@@ -88,10 +88,12 @@ export async function computeInvoiceLines(db, session, settings, opts) {
       article_id: String(article._id),
       description: article.name,
       hsn_code: article.hsn_code,
-      // Some shops keep a purity value on the article for their own records
-      // (e.g. silver sold by weight, not purity-graded for the customer) but
-      // don't want it printed on the bill — respect that per article.
-      purity: article.show_purity === false ? '' : (article.purity || ''),
+      // Always keep the real purity on the invoice record — whether it's
+      // actually printed is a display choice made on the invoice view (it
+      // defaults from this snapshot of the article's own preference, but
+      // stays overridable there without losing the underlying data).
+      purity: article.purity || '',
+      show_purity: article.show_purity !== false,
       gross_weight: piece.gross_weight,
       stone_weight: piece.stone_weight,
       net_weight: piece.net_weight,

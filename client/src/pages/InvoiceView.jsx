@@ -21,6 +21,7 @@ export default function InvoiceView() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [makingDisplay, setMakingDisplay] = useState('percent'); // 'percent' | 'amount'
+  const [purityOverride, setPurityOverride] = useState(null); // null = use each item's own default; true/false = force all
 
   function load() {
     api.invoices.get(id).then(setData);
@@ -43,7 +44,14 @@ export default function InvoiceView() {
   const documentType = data.document_type || 'tax_invoice';
   const isEstimate = documentType === 'estimate';
   const anyDiamondItem = items.some((it) => it.diamond_carat > 0);
-  const anyPurityItem = items.some((it) => it.purity);
+  // Each item defaults from the article's own "show purity on invoices"
+  // preference (Silver defaults to hidden, others to shown) — the page
+  // button below overrides that default for every line at once, without
+  // discarding the underlying purity value either way.
+  const purityVisible = (it) => (purityOverride !== null ? purityOverride : it.show_purity !== false);
+  const anyPurityValue = items.some((it) => it.purity);
+  const anyPurityShownNow = items.some((it) => it.purity && purityVisible(it));
+  const purityButtonState = purityOverride !== null ? purityOverride : anyPurityShownNow;
 
   return (
     <div>
@@ -56,6 +64,11 @@ export default function InvoiceView() {
         >
           Making charge: {makingDisplay === 'percent' ? '%' : '₹'} (click to show {makingDisplay === 'percent' ? '₹' : '%'})
         </button>
+        {anyPurityValue && (
+          <button className="secondary" onClick={() => setPurityOverride(!purityButtonState)}>
+            Purity: {purityButtonState ? 'Shown' : 'Hidden'} (click to {purityButtonState ? 'hide' : 'show'})
+          </button>
+        )}
         {!isCancelled && <button className="danger" onClick={cancelInvoice}>Cancel Invoice</button>}
         <button onClick={() => window.print()}>Print / Save PDF</button>
       </div>
@@ -103,9 +116,9 @@ export default function InvoiceView() {
         <table className="invoice-items-table">
           <colgroup>
             <col style={{ width: '3%' }} />
-            <col style={{ width: descriptionWidth(isEstimate, anyDiamondItem, anyPurityItem) }} />
+            <col style={{ width: descriptionWidth(isEstimate, anyDiamondItem, anyPurityShownNow) }} />
             {!isEstimate && <col style={{ width: '5%' }} />}
-            {anyPurityItem && <col style={{ width: '6%' }} />}
+            {anyPurityShownNow && <col style={{ width: '6%' }} />}
             <col style={{ width: '6%' }} />
             <col style={{ width: '6%' }} />
             <col style={{ width: '7%' }} />
@@ -121,7 +134,7 @@ export default function InvoiceView() {
             <tr>
               <th>#</th><th>Description</th>
               {!isEstimate && <th>HSN</th>}
-              {anyPurityItem && <th>Purity</th>}
+              {anyPurityShownNow && <th>Purity</th>}
               <th>Gross (g)</th><th>Net (g)</th><th>Rate/g</th>
               {anyDiamondItem && <><th>Diamond Rate</th><th>Diamond Ct/Kt</th></>}
               <th>Metal Val.</th>
@@ -136,7 +149,7 @@ export default function InvoiceView() {
                 <td>{idx + 1}</td>
                 <td>{it.description}</td>
                 {!isEstimate && <td>{it.hsn_code}</td>}
-                {anyPurityItem && <td>{it.purity}</td>}
+                {anyPurityShownNow && <td>{purityVisible(it) ? it.purity : ''}</td>}
                 <td>{it.gross_weight.toFixed(3)}</td>
                 <td>{it.net_weight.toFixed(3)}</td>
                 <td>₹{it.metal_rate_per_gram.toFixed(2)}</td>

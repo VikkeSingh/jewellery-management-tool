@@ -19,12 +19,25 @@ export default function Dashboard() {
 
   const totalPieces = articles.reduce((sum, a) => sum + a.quantity, 0);
   const totalWeight = articles.reduce((sum, a) => sum + a.total_net_weight, 0);
-  const goldValue = articles
-    .filter((a) => a.metal === 'Gold')
-    .reduce((sum, a) => sum + a.total_net_weight * (settings?.gold_rate_per_gram || 0), 0);
-  const silverValue = articles
-    .filter((a) => a.metal === 'Silver')
-    .reduce((sum, a) => sum + a.total_net_weight * (settings?.silver_rate_per_gram || 0), 0);
+
+  function rateForMetal(metal) {
+    if (metal === 'Gold') return settings?.gold_rate_per_gram || 0;
+    if (metal === 'Silver') return settings?.silver_rate_per_gram || 0;
+    return 0; // Platinum/Diamond have no plain per-gram rate to value stock by
+  }
+
+  const metalBreakdown = Object.values(
+    articles.reduce((groups, a) => {
+      const g = groups[a.metal] || { metal: a.metal, quantity: 0, reservedQuantity: 0, weight: 0 };
+      g.quantity += a.quantity;
+      g.reservedQuantity += a.reserved_quantity || 0;
+      g.weight += a.total_net_weight;
+      groups[a.metal] = g;
+      return groups;
+    }, {})
+  ).sort((a, b) => a.metal.localeCompare(b.metal));
+
+  const totalEstValue = metalBreakdown.reduce((sum, g) => sum + g.weight * rateForMetal(g.metal), 0);
 
   const today = new Date().toISOString().slice(0, 10);
   const todaysInvoices = invoices.filter((inv) => inv.invoice_date?.slice(0, 10) === today && inv.status !== 'cancelled');
@@ -48,7 +61,7 @@ export default function Dashboard() {
           <div className="label">Pieces in stock ({totalWeight.toFixed(2)} g)</div>
         </div>
         <div className="card stat">
-          <div className="value">₹{(goldValue + silverValue).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+          <div className="value">₹{totalEstValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
           <div className="label">Est. stock value (at current rates)</div>
         </div>
         <div className="card stat">
@@ -56,6 +69,32 @@ export default function Dashboard() {
           <div className="label">Today's sales ({todaysInvoices.length} bills)</div>
         </div>
       </div>
+
+      {metalBreakdown.length > 0 && (
+        <div className="card">
+          <h3>Stock by metal</h3>
+          <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.min(metalBreakdown.length, 4)}, 1fr)` }}>
+            {metalBreakdown.map((g) => {
+              const rate = rateForMetal(g.metal);
+              const value = g.weight * rate;
+              return (
+                <div className="card stat" key={g.metal} style={{ marginBottom: 0 }}>
+                  <div className="value">{g.quantity}</div>
+                  <div className="label">
+                    {g.metal} pieces ({g.weight.toFixed(2)} g)
+                    {g.reservedQuantity > 0 ? ` · +${g.reservedQuantity} reserved` : ''}
+                  </div>
+                  {rate > 0 ? (
+                    <div className="hint">≈ ₹{value.toLocaleString('en-IN', { maximumFractionDigits: 0 })} at today's rate</div>
+                  ) : (
+                    <div className="hint">No per-gram rate set for {g.metal}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid cols-2">
         <div className="card">

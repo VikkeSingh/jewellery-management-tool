@@ -46,6 +46,7 @@ export default function NewSale() {
   const [settings, setSettings] = useState(null);
   const [articles, setArticles] = useState([]);
   const [selectedArticleId, setSelectedArticleId] = useState('');
+  const [articleSearch, setArticleSearch] = useState('');
   const [availablePieces, setAvailablePieces] = useState([]);
   const [selectedPieceId, setSelectedPieceId] = useState('');
   const [cart, setCart] = useState([]);
@@ -94,6 +95,11 @@ export default function NewSale() {
   }, [customerQuery]);
 
   const selectedArticle = articles.find((a) => String(a.id) === String(selectedArticleId));
+  const articleMatches = selectedArticleId || articleSearch.trim().length < 1 ? [] : articles.filter((a) => {
+    if (a.quantity <= 0) return false;
+    const q = articleSearch.trim().toLowerCase();
+    return a.name.toLowerCase().includes(q) || (a.sku || '').toLowerCase().includes(q);
+  });
 
   function addToCart() {
     const piece = availablePieces.find((p) => String(p.id) === String(selectedPieceId));
@@ -113,6 +119,7 @@ export default function NewSale() {
       diamond_kt: selectedArticle.purity || '',
     }]);
     setSelectedArticleId('');
+    setArticleSearch('');
     setSelectedPieceId('');
   }
 
@@ -133,6 +140,7 @@ export default function NewSale() {
       return next;
     });
     setSelectedArticleId(article.id);
+    setArticleSearch('');
     setSelectedPieceId(piece.id);
     setShowAddArticle(false);
   }
@@ -280,12 +288,26 @@ export default function NewSale() {
         <div className="grid cols-3">
           <div className="field">
             <label>Article</label>
-            <select value={selectedArticleId} onChange={(e) => { setSelectedArticleId(e.target.value); setSelectedPieceId(''); }}>
-              <option value="">Select article...</option>
-              {articles.filter((a) => a.quantity > 0).map((a) => (
-                <option key={a.id} value={a.id}>{a.name} ({a.quantity} in stock)</option>
-              ))}
-            </select>
+            <input
+              value={selectedArticle ? `${selectedArticle.name} (${selectedArticle.quantity} in stock)` : articleSearch}
+              onChange={(e) => { setSelectedArticleId(''); setSelectedPieceId(''); setArticleSearch(e.target.value); }}
+              placeholder="Search article by name or SKU..."
+            />
+            {articleMatches.length > 0 && (
+              <div className="card" style={{ marginTop: 6, padding: 8 }}>
+                {articleMatches.map((a) => (
+                  <div key={a.id} style={{ padding: '4px 0', cursor: 'pointer' }}
+                    onClick={() => { setSelectedArticleId(a.id); setArticleSearch(''); setSelectedPieceId(''); }}>
+                    {a.name} — {a.metal}{a.purity ? `, ${a.purity}` : ''} ({a.quantity} in stock)
+                  </div>
+                ))}
+              </div>
+            )}
+            {selectedArticle && (
+              <button type="button" className="link" style={{ marginTop: 4 }} onClick={() => { setSelectedArticleId(''); setSelectedPieceId(''); }}>
+                Change article
+              </button>
+            )}
           </div>
           <div className="field">
             <label>Piece</label>

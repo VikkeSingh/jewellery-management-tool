@@ -209,6 +209,7 @@ router.post('/:id/complete', async (req, res) => {
         old_gold_exchange_value: b.old_gold_exchange_value,
         old_silver_exchange_value: b.old_silver_exchange_value,
         advance_paid: order.advance_amount,
+        amount_paid: b.amount_paid,
         orderId: String(order._id),
         orderNumber: order.order_number,
       });

@@ -58,6 +58,8 @@ export default function CompleteOrder() {
   const [discount, setDiscount] = useState(0);
   const [oldGold, setOldGold] = useState(0);
   const [oldSilver, setOldSilver] = useState(0);
+  const [amountPaid, setAmountPaid] = useState('');
+  const [amountPaidTouched, setAmountPaidTouched] = useState(false);
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -132,6 +134,15 @@ export default function CompleteOrder() {
     setCart(cart.filter((c) => c.key !== key));
   }
 
+  // Partial-payment tracking only applies to Estimates — clear it if the
+  // shop switches to Tax Invoice so it can't leak into a GST document.
+  useEffect(() => {
+    if (documentType === 'tax_invoice') {
+      setAmountPaid('');
+      setAmountPaidTouched(false);
+    }
+  }, [documentType]);
+
   function handleArticleCreated({ article, piece }) {
     setArticles((prev) => {
       const idx = prev.findIndex((a) => a.id === article.id);
@@ -161,10 +172,27 @@ export default function CompleteOrder() {
     return { taxable: round2(taxable), cgst: round2(cgst), sgst: round2(sgst), igst: round2(igst), grand, roundOff: round2(grand - preRound) };
   }, [cart, settings, isInterstate, documentType, discount, oldGold, oldSilver, advanceAmount]);
 
+  // Amount paid defaults to "paid in full" (the final balance due now) and
+  // tracks the live total, unless the shop has manually typed a different
+  // (partial) amount.
+  useEffect(() => {
+    if (documentType === 'estimate' && totals && !amountPaidTouched) {
+      setAmountPaid(totals.grand);
+    }
+  }, [totals?.grand, documentType, amountPaidTouched]);
+
   async function submitCompletion() {
     setError('');
     if (cart.length === 0) { setError('Add at least one item.'); return; }
     if (!customer.name.trim()) { setError('Customer name is required.'); return; }
+    if (documentType === 'estimate' && totals && Number(amountPaid) > totals.grand) {
+      setError('Amount paid cannot be more than the balance due.');
+      return;
+    }
+    if (documentType === 'estimate' && Number(amountPaid) < 0) {
+      setError('Amount paid cannot be negative.');
+      return;
+    }
     setSubmitting(true);
     try {
       const invoice = await api.orders.complete(id, {
@@ -174,6 +202,7 @@ export default function CompleteOrder() {
         discount: Number(discount || 0),
         old_gold_exchange_value: Number(oldGold || 0),
         old_silver_exchange_value: Number(oldSilver || 0),
+        amount_paid: documentType === 'estimate' ? Number(amountPaid || 0) : undefined,
         items: cart.map((c) => {
           const line = computeLine(c, isInterstate, documentType);
           return {
@@ -371,6 +400,34 @@ export default function CompleteOrder() {
                 <div className="row"><span>Advance already paid</span><span>−₹{advanceAmount.toFixed(2)}</span></div>
                 <div className="row"><span>Round off</span><span>₹{totals.roundOff.toFixed(2)}</span></div>
                 <div className="row grand"><span>Balance due now</span><span>₹{totals.grand.toLocaleString('en-IN')}</span></div>
+              </div>
+            )}
+
+            {totals && documentType === 'estimate' && (
+              <div className="card" style={{ marginTop: 16 }}>
+                <h3 style={{ marginTop: 0 }}>Payment</h3>
+                <p className="hint" style={{ marginTop: 0 }}>Defaults to the full balance due — reduce it if the customer is only paying part now.</p>
+                <div className="grid cols-2">
+                  <div className="field">
+                    <label>Amount paid now (₹)</label>
+                    <input
+                      type="number" step="0.01" value={amountPaid}
+                      onChange={(e) => { setAmountPaidTouched(true); setAmountPaid(e.target.value); }}
+                    />
+                    {amountPaidTouched && (
+                      <button
+                        type="button" className="link" style={{ marginTop: 4 }}
+                        onClick={() => { setAmountPaidTouched(false); setAmountPaid(totals.grand); }}
+                      >
+                        Reset to full amount
+                      </button>
+                    )}
+                  </div>
+                  <div className="field">
+                    <label>Pending (to collect later)</label>
+                    <input readOnly value={`₹${Math.max(0, round2(totals.grand - Number(amountPaid || 0))).toFixed(2)}`} />
+                  </div>
+                </div>
               </div>
             )}
           </>

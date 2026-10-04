@@ -22,6 +22,10 @@ export default function InvoiceView() {
   const [data, setData] = useState(null);
   const [makingDisplay, setMakingDisplay] = useState('percent'); // 'percent' | 'amount'
   const [purityOverride, setPurityOverride] = useState(null); // null = use each item's own default; true/false = force all
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+  const [recordingPayment, setRecordingPayment] = useState(false);
 
   function load() {
     api.invoices.get(id).then(setData);
@@ -38,11 +42,33 @@ export default function InvoiceView() {
     }
   }
 
+  async function recordPayment(e) {
+    e.preventDefault();
+    setPaymentError('');
+    const amount = Number(paymentAmount);
+    if (!(amount > 0)) { setPaymentError('Enter an amount greater than 0.'); return; }
+    setRecordingPayment(true);
+    try {
+      await api.invoices.recordPayment(id, amount);
+      setPaymentAmount('');
+      setShowPaymentForm(false);
+      load();
+    } catch (err) {
+      setPaymentError(err.message);
+    } finally {
+      setRecordingPayment(false);
+    }
+  }
+
   if (!data) return <p>Loading...</p>;
   const { settings, items } = data;
   const isCancelled = data.status === 'cancelled';
   const documentType = data.document_type || 'tax_invoice';
   const isEstimate = documentType === 'estimate';
+  // Older estimates predate this field — treat them as paid in full, same
+  // as how they always behaved before partial-payment tracking existed.
+  const amountPaid = data.amount_paid ?? data.grand_total;
+  const pendingAmount = Math.round((data.grand_total - amountPaid + Number.EPSILON) * 100) / 100;
   const anyDiamondItem = items.some((it) => it.diamond_carat > 0);
   // Each item defaults from the article's own "show purity on invoices"
   // preference (Silver defaults to hidden, others to shown) — the page
@@ -69,12 +95,34 @@ export default function InvoiceView() {
             Purity: {purityButtonState ? 'Shown' : 'Hidden'} (click to {purityButtonState ? 'hide' : 'show'})
           </button>
         )}
+        {isEstimate && !isCancelled && pendingAmount > 0 && (
+          <button className="secondary" onClick={() => setShowPaymentForm((v) => !v)}>Record Payment</button>
+        )}
         {!isCancelled && <button className="danger" onClick={cancelInvoice}>Cancel Invoice</button>}
         <button onClick={() => window.print()}>Print / Save PDF</button>
       </div>
 
+      {showPaymentForm && (
+        <div className="card no-print" style={{ maxWidth: 800, margin: '0 auto 14px' }}>
+          <form onSubmit={recordPayment} style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Payment received now (₹) — pending is ₹{pendingAmount.toFixed(2)}</label>
+              <input type="number" step="0.01" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} autoFocus />
+            </div>
+            <button type="submit" disabled={recordingPayment}>{recordingPayment ? 'Saving...' : 'Save Payment'}</button>
+            <button type="button" className="secondary" onClick={() => { setShowPaymentForm(false); setPaymentError(''); }}>Cancel</button>
+          </form>
+          {paymentError && <div className="error-text">{paymentError}</div>}
+        </div>
+      )}
+
       <div className="invoice-sheet">
         {isCancelled && <div className="badge sold" style={{ marginBottom: 10 }}>CANCELLED</div>}
+        {isEstimate && !isCancelled && (
+          <div className={`badge ${pendingAmount > 0 ? 'low' : 'in_stock'}`} style={{ marginBottom: 10 }}>
+            {pendingAmount > 0 ? `PARTIALLY PAID — ₹${pendingAmount.toFixed(2)} PENDING` : 'PAID IN FULL'}
+          </div>
+        )}
         <div className="invoice-logo">
           <LogoLJ size={120} />
           <div className="shop-name">{settings.shop_name}</div>
@@ -186,6 +234,12 @@ export default function InvoiceView() {
           {data.advance_paid > 0 && <div className="row"><span>Advance paid ({data.order_number})</span><span>−₹{data.advance_paid.toFixed(2)}</span></div>}
           <div className="row"><span>Round off</span><span>₹{data.round_off.toFixed(2)}</span></div>
           <div className="row grand"><span>Grand Total</span><span>₹{data.grand_total.toLocaleString('en-IN')}</span></div>
+          {isEstimate && pendingAmount > 0 && (
+            <>
+              <div className="row"><span>Amount paid</span><span>₹{amountPaid.toFixed(2)}</span></div>
+              <div className="row" style={{ fontWeight: 700 }}><span>Pending (to collect later)</span><span>₹{pendingAmount.toFixed(2)}</span></div>
+            </>
+          )}
         </div>
 
         <div className="invoice-footer-note">

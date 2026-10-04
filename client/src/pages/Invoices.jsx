@@ -21,6 +21,9 @@ export default function Invoices() {
   // and are tax invoices.
   const typeOf = (inv) => (inv.document_type === 'estimate' ? 'estimate' : 'tax_invoice');
   const visible = tab === 'all' ? invoices : invoices.filter((inv) => typeOf(inv) === tab);
+  // Older estimates predate the amount_paid field — treat them as paid in
+  // full, same as how they always behaved before partial payments existed.
+  const pendingOf = (inv) => Math.max(0, Math.round((inv.grand_total - (inv.amount_paid ?? inv.grand_total) + Number.EPSILON) * 100) / 100);
 
   return (
     <div>
@@ -45,21 +48,33 @@ export default function Invoices() {
           </div>
         ) : (
           <table>
-            <thead><tr><th>No.</th>{tab === 'all' && <th>Type</th>}<th>Date</th><th>Customer</th><th>Payment</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>No.</th>{tab === 'all' && <th>Type</th>}<th>Date</th><th>Customer</th><th>Payment</th><th>Total</th><th>Status</th>{(tab === 'estimate' || tab === 'all') && <th>Payment Status</th>}</tr></thead>
             <tbody>
-              {visible.map((inv) => (
-                <tr key={inv.id}>
-                  <td><Link to={`/invoices/${inv.id}`}>{inv.invoice_number}</Link></td>
-                  {tab === 'all' && (
-                    <td><span className={`badge ${typeOf(inv) === 'estimate' ? 'low' : 'in_stock'}`}>{typeOf(inv) === 'estimate' ? 'Estimate' : 'Tax Invoice'}</span></td>
-                  )}
-                  <td>{inv.invoice_date?.slice(0, 16).replace('T', ' ')}</td>
-                  <td>{inv.customer_name || '—'}</td>
-                  <td>{inv.payment_mode}</td>
-                  <td>₹{inv.grand_total.toLocaleString('en-IN')}</td>
-                  <td><span className={`badge ${inv.status === 'cancelled' ? 'sold' : 'in_stock'}`}>{inv.status}</span></td>
-                </tr>
-              ))}
+              {visible.map((inv) => {
+                const pending = pendingOf(inv);
+                return (
+                  <tr key={inv.id}>
+                    <td><Link to={`/invoices/${inv.id}`}>{inv.invoice_number}</Link></td>
+                    {tab === 'all' && (
+                      <td><span className={`badge ${typeOf(inv) === 'estimate' ? 'low' : 'in_stock'}`}>{typeOf(inv) === 'estimate' ? 'Estimate' : 'Tax Invoice'}</span></td>
+                    )}
+                    <td>{inv.invoice_date?.slice(0, 16).replace('T', ' ')}</td>
+                    <td>{inv.customer_name || '—'}</td>
+                    <td>{inv.payment_mode}</td>
+                    <td>₹{inv.grand_total.toLocaleString('en-IN')}</td>
+                    <td><span className={`badge ${inv.status === 'cancelled' ? 'sold' : 'in_stock'}`}>{inv.status}</span></td>
+                    {(tab === 'estimate' || tab === 'all') && (
+                      <td>
+                        {typeOf(inv) !== 'estimate' || inv.status === 'cancelled' ? '—' : (
+                          <span className={`badge ${pending > 0 ? 'low' : 'in_stock'}`}>
+                            {pending > 0 ? `₹${pending.toLocaleString('en-IN')} pending` : 'Paid in full'}
+                          </span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

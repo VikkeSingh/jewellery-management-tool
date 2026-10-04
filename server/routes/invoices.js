@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getDb, getClient, toObjectId, isValidObjectId } from '../db/mongo.js';
 import { withId, withIds } from '../db/serialize.js';
 import { SETTINGS_ID } from '../db/seed.js';
-import { computeInvoiceLines, buildInvoiceDoc, invoiceCounterField, ensureCustomer } from '../services/invoiceCalc.js';
+import { computeInvoiceLines, buildInvoiceDoc, invoiceCounterField, ensureCustomer, round2 } from '../services/invoiceCalc.js';
 
 const router = Router();
 
@@ -61,6 +61,7 @@ router.post('/', async (req, res) => {
         discount: b.discount,
         old_gold_exchange_value: b.old_gold_exchange_value,
         old_silver_exchange_value: b.old_silver_exchange_value,
+        amount_paid: b.amount_paid,
       });
 
       const invoiceResult = await db.collection('invoices').insertOne(invoiceDoc, { session });
@@ -87,6 +88,29 @@ router.post('/', async (req, res) => {
   } finally {
     await session.endSession();
   }
+});
+
+// Record an additional payment against an Estimate's outstanding balance.
+// body: { amount }
+router.post('/:id/payment', async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Invoice not found' });
+  const amount = round2(Number((req.body || {}).amount));
+  if (!(amount > 0)) return res.status(400).json({ error: 'Payment amount must be greater than 0' });
+
+  const db = await getDb();
+  const invoice = await db.collection('invoices').findOne({ _id: toObjectId(req.params.id) });
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+  if (invoice.document_type !== 'estimate') return res.status(400).json({ error: 'Partial payment tracking only applies to Estimates' });
+  if (invoice.status === 'cancelled') return res.status(400).json({ error: 'Cannot record a payment on a cancelled estimate' });
+
+  const currentPaid = invoice.amount_paid ?? invoice.grand_total;
+  const pending = round2(invoice.grand_total - currentPaid);
+  if (amount > pending) return res.status(400).json({ error: `Payment exceeds the pending balance of ₹${pending.toFixed(2)}` });
+
+  const newAmountPaid = round2(currentPaid + amount);
+  await db.collection('invoices').updateOne({ _id: toObjectId(req.params.id) }, { $set: { amount_paid: newAmountPaid } });
+  const updated = await db.collection('invoices').findOne({ _id: toObjectId(req.params.id) });
+  res.json(withId(updated));
 });
 
 // Cancel an invoice: restores pieces to in_stock, marks invoice cancelled (kept for GST audit trail)

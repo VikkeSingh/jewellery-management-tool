@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 
+function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+
 export default function Dashboard() {
   const [articles, setArticles] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -46,6 +48,12 @@ export default function Dashboard() {
   const lowStock = articles.filter((a) => a.quantity > 0 && a.quantity <= 2);
   const recentInvoices = invoices.slice(0, 6);
   const totalAdvanceHeld = pendingOrders.reduce((sum, o) => sum + o.advance_amount, 0);
+
+  const pendingEstimates = invoices
+    .filter((inv) => inv.document_type === 'estimate' && inv.status !== 'cancelled')
+    .map((inv) => ({ ...inv, pending: round2(inv.grand_total - (inv.amount_paid ?? inv.grand_total)) }))
+    .filter((inv) => inv.pending > 0);
+  const totalPendingEstimates = pendingEstimates.reduce((sum, inv) => sum + inv.pending, 0);
 
   return (
     <div>
@@ -117,6 +125,30 @@ export default function Dashboard() {
                 </tbody>
               </table>
               {pendingOrders.length > 5 && <p className="hint"><Link to="/orders">View all {pendingOrders.length} pending orders →</Link></p>}
+            </>
+          )}
+        </div>
+
+        <div className="card">
+          <h3>Pending estimate payments</h3>
+          {pendingEstimates.length === 0 ? (
+            <p className="hint">No estimates with a balance pending.</p>
+          ) : (
+            <>
+              <p className="hint">{pendingEstimates.length} estimate{pendingEstimates.length === 1 ? '' : 's'} · ₹{totalPendingEstimates.toLocaleString('en-IN')} pending</p>
+              <table>
+                <thead><tr><th>Estimate</th><th>Customer</th><th>Pending</th></tr></thead>
+                <tbody>
+                  {pendingEstimates.slice(0, 5).map((inv) => (
+                    <tr key={inv.id}>
+                      <td><Link to={`/invoices/${inv.id}`}>{inv.invoice_number}</Link></td>
+                      <td>{inv.customer_name || '—'}</td>
+                      <td>₹{inv.pending.toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {pendingEstimates.length > 5 && <p className="hint"><Link to="/invoices">View all in Invoices →</Link></p>}
             </>
           )}
         </div>

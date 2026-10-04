@@ -52,6 +52,7 @@ export const api = {
     get: (id) => request(`/invoices/${id}`),
     create: (body) => request('/invoices', { method: 'POST', body: JSON.stringify(body) }),
     cancel: (id) => request(`/invoices/${id}/cancel`, { method: 'POST' }),
+    recordPayment: (id, amount) => request(`/invoices/${id}/payment`, { method: 'POST', body: JSON.stringify({ amount }) }),
   },
   orders: {
     list: (status) => request(`/orders${status ? `?status=${status}` : ''}`),

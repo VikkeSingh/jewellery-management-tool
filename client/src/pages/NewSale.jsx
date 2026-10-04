@@ -58,6 +58,8 @@ export default function NewSale() {
   const [discount, setDiscount] = useState(0);
   const [oldGold, setOldGold] = useState(0);
   const [oldSilver, setOldSilver] = useState(0);
+  const [amountPaid, setAmountPaid] = useState('');
+  const [amountPaidTouched, setAmountPaidTouched] = useState(false);
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -67,13 +69,16 @@ export default function NewSale() {
     api.articles.list().then(setArticles);
   }, []);
 
-  // Old gold/silver exchange only applies to Estimates, not GST tax
-  // invoices — clear any entered values if the user switches to Tax Invoice
-  // so they can't accidentally carry over into a GST document.
+  // Old gold/silver exchange and partial-payment tracking only apply to
+  // Estimates, not GST tax invoices — clear any entered values if the user
+  // switches to Tax Invoice so they can't accidentally carry over into a
+  // GST document.
   useEffect(() => {
     if (documentType === 'tax_invoice') {
       setOldGold(0);
       setOldSilver(0);
+      setAmountPaid('');
+      setAmountPaidTouched(false);
     }
   }, [documentType]);
 
@@ -148,10 +153,26 @@ export default function NewSale() {
     return { taxable: round2(taxable), cgst: round2(cgst), sgst: round2(sgst), igst: round2(igst), grand, roundOff: round2(grand - preRound) };
   }, [cart, settings, isInterstate, documentType, discount, oldGold, oldSilver]);
 
+  // Amount paid defaults to "paid in full" and tracks the live total, unless
+  // the shop has manually typed a different (partial) amount.
+  useEffect(() => {
+    if (documentType === 'estimate' && totals && !amountPaidTouched) {
+      setAmountPaid(totals.grand);
+    }
+  }, [totals?.grand, documentType, amountPaidTouched]);
+
   async function submitSale() {
     setError('');
     if (cart.length === 0) { setError('Add at least one item to the cart.'); return; }
     if (!customer.name.trim()) { setError('Customer name is required for the invoice.'); return; }
+    if (documentType === 'estimate' && totals && Number(amountPaid) > totals.grand) {
+      setError('Amount paid cannot be more than the grand total.');
+      return;
+    }
+    if (documentType === 'estimate' && Number(amountPaid) < 0) {
+      setError('Amount paid cannot be negative.');
+      return;
+    }
     setSubmitting(true);
     try {
       const invoice = await api.invoices.create({
@@ -161,6 +182,7 @@ export default function NewSale() {
         discount: Number(discount || 0),
         old_gold_exchange_value: documentType === 'estimate' ? Number(oldGold || 0) : 0,
         old_silver_exchange_value: documentType === 'estimate' ? Number(oldSilver || 0) : 0,
+        amount_paid: documentType === 'estimate' ? Number(amountPaid || 0) : undefined,
         items: cart.map((c) => {
           const line = computeLine(c, settings, isInterstate, documentType);
           return {
@@ -373,6 +395,34 @@ export default function NewSale() {
                 {documentType === 'estimate' && Number(oldSilver) > 0 && <div className="row"><span>Old silver exchange</span><span>−₹{Number(oldSilver).toFixed(2)}</span></div>}
                 <div className="row"><span>Round off</span><span>₹{totals.roundOff.toFixed(2)}</span></div>
                 <div className="row grand"><span>Grand Total</span><span>₹{totals.grand.toLocaleString('en-IN')}</span></div>
+              </div>
+            )}
+
+            {totals && documentType === 'estimate' && (
+              <div className="card" style={{ marginTop: 16 }}>
+                <h3 style={{ marginTop: 0 }}>Payment</h3>
+                <p className="hint" style={{ marginTop: 0 }}>Defaults to the full amount — reduce it if the customer is only paying part now.</p>
+                <div className="grid cols-2">
+                  <div className="field">
+                    <label>Amount paid now (₹)</label>
+                    <input
+                      type="number" step="0.01" value={amountPaid}
+                      onChange={(e) => { setAmountPaidTouched(true); setAmountPaid(e.target.value); }}
+                    />
+                    {amountPaidTouched && (
+                      <button
+                        type="button" className="link" style={{ marginTop: 4 }}
+                        onClick={() => { setAmountPaidTouched(false); setAmountPaid(totals.grand); }}
+                      >
+                        Reset to full amount
+                      </button>
+                    )}
+                  </div>
+                  <div className="field">
+                    <label>Pending (to collect later)</label>
+                    <input readOnly value={`₹${Math.max(0, round2(totals.grand - Number(amountPaid || 0))).toFixed(2)}`} />
+                  </div>
+                </div>
               </div>
             )}
           </>

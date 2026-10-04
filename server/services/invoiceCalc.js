@@ -143,6 +143,15 @@ export function buildInvoiceDoc(settings, calc, opts) {
   const grandTotal = Math.round(preRoundTotal);
   const roundOff = round2(grandTotal - preRoundTotal);
 
+  // How much the customer actually handed over when this document was
+  // issued — only meaningful (and editable) for Estimates, where a
+  // customer can pay part now and the rest later. Defaults to "paid in
+  // full" so Tax Invoices (which never expose this in the UI) and normal
+  // fully-paid Estimates both land on amount_paid === grand_total.
+  const amountPaid = opts.amount_paid !== undefined
+    ? Math.min(round2(Number(opts.amount_paid)), grandTotal)
+    : grandTotal;
+
   const prefix = calc.documentType === 'estimate' ? (settings.estimate_prefix || 'EST') : settings.invoice_prefix;
   const nextNo = calc.documentType === 'estimate' ? (settings.next_estimate_no || 1) : settings.next_invoice_no;
   const invoiceNumber = `${prefix}-${String(nextNo).padStart(4, '0')}`;
@@ -170,6 +179,7 @@ export function buildInvoiceDoc(settings, calc, opts) {
     old_gold_exchange_value: oldGoldValue,
     old_silver_exchange_value: oldSilverValue,
     advance_paid: advancePaid,
+    amount_paid: amountPaid,
     order_id: opts.orderId || null,
     order_number: opts.orderNumber || null,
     status: 'completed',

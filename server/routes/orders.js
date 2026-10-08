@@ -74,6 +74,7 @@ router.post('/', async (req, res) => {
       const customerId = await ensureCustomer(db, session, customer);
 
       const orderNumber = `${settings.order_prefix || 'ORD'}-${String(settings.next_order_no || 1).padStart(4, '0')}`;
+      const now = new Date().toISOString();
       const orderDoc = {
         order_number: orderNumber,
         status: 'pending',
@@ -92,10 +93,15 @@ router.post('/', async (req, res) => {
         estimated_amount: round2(estimatedAmount),
         advance_amount: advanceAmount,
         advance_payment_mode: b.advance_payment_mode || 'Cash',
-        advance_date: new Date().toISOString(),
+        advance_date: now,
+        // Running history of every payment collected against this order
+        // (the first entry mirrors advance_amount/advance_payment_mode above
+        // so the two always agree) — lets the shop collect more later and
+        // still see when and how each part was paid.
+        payments: advanceAmount > 0 ? [{ amount: advanceAmount, payment_mode: b.advance_payment_mode || 'Cash', date: now }] : [],
         final_invoice_id: null,
         final_invoice_number: null,
-        created_at: new Date().toISOString(),
+        created_at: now,
         completed_at: null,
         cancelled_at: null,
       };
@@ -155,6 +161,33 @@ router.post('/:id/cancel', async (req, res) => {
   } finally {
     await session.endSession();
   }
+});
+
+// Record an additional payment collected against a pending order's
+// estimated amount, on top of whatever advance was taken at creation.
+// body: { amount, payment_mode }
+router.post('/:id/payment', async (req, res) => {
+  if (!isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Order not found' });
+  const b = req.body || {};
+  const amount = round2(Number(b.amount));
+  if (!(amount > 0)) return res.status(400).json({ error: 'Payment amount must be greater than 0' });
+
+  const db = await getDb();
+  const order = await db.collection('orders').findOne({ _id: toObjectId(req.params.id) });
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (order.status !== 'pending') return res.status(400).json({ error: `Order is already ${order.status}` });
+
+  const paymentMode = b.payment_mode || 'Cash';
+  const newAdvanceAmount = round2((order.advance_amount || 0) + amount);
+  await db.collection('orders').updateOne(
+    { _id: order._id },
+    {
+      $set: { advance_amount: newAdvanceAmount },
+      $push: { payments: { amount, payment_mode: paymentMode, date: new Date().toISOString() } },
+    }
+  );
+  const updated = await db.collection('orders').findOne({ _id: order._id });
+  res.json(withId(updated));
 });
 
 /**

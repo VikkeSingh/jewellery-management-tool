@@ -60,5 +60,6 @@ export const api = {
     create: (body) => request('/orders', { method: 'POST', body: JSON.stringify(body) }),
     cancel: (id) => request(`/orders/${id}/cancel`, { method: 'POST' }),
     complete: (id, body) => request(`/orders/${id}/complete`, { method: 'POST', body: JSON.stringify(body) }),
+    recordPayment: (id, amount, paymentMode) => request(`/orders/${id}/payment`, { method: 'POST', body: JSON.stringify({ amount, payment_mode: paymentMode }) }),
   },
 };

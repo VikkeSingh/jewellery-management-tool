@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState([]);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [salesPeriod, setSalesPeriod] = useState('month');
 
   useEffect(() => {
     Promise.all([api.articles.list(), api.invoices.list(), api.settings.get(), api.orders.list('pending')])
@@ -54,6 +55,33 @@ export default function Dashboard() {
     .map((inv) => ({ ...inv, pending: round2(inv.grand_total - (inv.amount_paid ?? inv.grand_total)) }))
     .filter((inv) => inv.pending > 0);
   const totalPendingEstimates = pendingEstimates.reduce((sum, inv) => sum + inv.pending, 0);
+
+  // Metal-wise sales for the selected period. Line items don't store the
+  // metal themselves, so it's looked up from the line's article.
+  const now = new Date();
+  const periodStart = salesPeriod === 'week'
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)) // Monday
+    : salesPeriod === 'month'
+      ? new Date(now.getFullYear(), now.getMonth(), 1)
+      : new Date(now.getFullYear(), 0, 1);
+  const metalByArticleId = Object.fromEntries(articles.map((a) => [a.id, a.metal]));
+  const periodInvoices = invoices.filter((inv) => inv.status !== 'cancelled' && new Date(inv.invoice_date) >= periodStart);
+  const metalSalesGroups = periodInvoices.reduce((groups, inv) => {
+    for (const it of inv.items || []) {
+      const metal = metalByArticleId[it.article_id] || 'Other';
+      const g = groups[metal] || { metal, amount: 0, weight: 0, pieces: 0 };
+      g.amount += it.line_total || 0;
+      g.weight += it.net_weight || 0;
+      g.pieces += 1;
+      groups[metal] = g;
+    }
+    return groups;
+  }, {});
+  for (const metal of ['Gold', 'Silver']) {
+    if (!metalSalesGroups[metal]) metalSalesGroups[metal] = { metal, amount: 0, weight: 0, pieces: 0 };
+  }
+  const metalSales = Object.values(metalSalesGroups).sort((a, b) => a.metal.localeCompare(b.metal));
+  const periodLabel = { week: 'this week', month: 'this month', year: 'this year' }[salesPeriod];
 
   return (
     <div>
@@ -103,6 +131,28 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>Sales by metal</h3>
+          <div style={{ flex: 1 }} />
+          <select value={salesPeriod} onChange={(e) => setSalesPeriod(e.target.value)} style={{ width: 'auto' }}>
+            <option value="week">This week</option>
+            <option value="month">This month</option>
+            <option value="year">This year</option>
+          </select>
+        </div>
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.min(metalSales.length, 4)}, 1fr)` }}>
+          {metalSales.map((g) => (
+            <div className="card stat" key={g.metal} style={{ marginBottom: 0 }}>
+              <div className="value">₹{g.amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+              <div className="label">{g.metal} sales {periodLabel}</div>
+              <div className="hint">{g.pieces} piece{g.pieces === 1 ? '' : 's'} · {g.weight.toFixed(2)} g</div>
+            </div>
+          ))}
+        </div>
+        <p className="hint">Item totals incl. GST from {periodInvoices.length} non-cancelled bill{periodInvoices.length === 1 ? '' : 's'}, before bill-level discount and old gold/silver exchange.</p>
+      </div>
 
       <div className="grid cols-2">
         <div className="card">

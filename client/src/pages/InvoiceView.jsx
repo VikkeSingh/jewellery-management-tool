@@ -242,6 +242,12 @@ export default function InvoiceView() {
           )}
         </div>
 
+        <div className="invoice-signature">
+          {settings.shop_name && <div>For {settings.shop_name}</div>}
+          <div className="stamp-space" />
+          <div className="sign-line">Authorised Signatory</div>
+        </div>
+
         <div className="invoice-footer-note">
           {settings.invoice_footer}<br />
           {isEstimate ? 'This is an estimate only, not a GST tax invoice.' : 'This is a computer-generated GST tax invoice.'}

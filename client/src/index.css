@@ -213,6 +213,9 @@ tr:hover td { background: #faf6ea; }
 .invoice-items-table th, .invoice-items-table td { padding: 5px 3px; overflow-wrap: break-word; }
 .invoice-sheet .totals-box { margin-top: 14px; }
 .invoice-footer-note { margin-top: 22px; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 10px; }
+.invoice-signature { margin: 28px 0 0 auto; width: 220px; text-align: center; font-size: 13px; break-inside: avoid; }
+.invoice-signature .stamp-space { height: 80px; }
+.invoice-signature .sign-line { border-top: 1px solid var(--ink); padding-top: 5px; font-weight: 600; }
 .print-actions { max-width: 800px; margin: 0 auto 14px; display: flex; gap: 10px; justify-content: flex-end; }
 
 @media print {

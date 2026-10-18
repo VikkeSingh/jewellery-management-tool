@@ -4,6 +4,23 @@ import { api } from '../api/client.js';
 
 function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 
+// Local-day 'YYYY-MM-DD' strings, matching what <input type="date"> uses.
+function toYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function parseLocalDate(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+
+// Start/end dates a preset fills into the date boxes (both inclusive).
+function presetRange(period) {
+  const now = new Date();
+  const start = period === 'week'
+    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)) // Monday
+    : period === 'month'
+      ? new Date(now.getFullYear(), now.getMonth(), 1)
+      : new Date(now.getFullYear(), 0, 1);
+  return { from: toYMD(start), to: toYMD(now) };
+}
+
 export default function Dashboard() {
   const [articles, setArticles] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -11,6 +28,17 @@ export default function Dashboard() {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [salesPeriod, setSalesPeriod] = useState('month');
+  const [salesFrom, setSalesFrom] = useState(() => presetRange('month').from);
+  const [salesTo, setSalesTo] = useState(() => presetRange('month').to);
+
+  function choosePeriod(period) {
+    setSalesPeriod(period);
+    if (period !== 'custom') {
+      const r = presetRange(period);
+      setSalesFrom(r.from);
+      setSalesTo(r.to);
+    }
+  }
 
   useEffect(() => {
     Promise.all([api.articles.list(), api.invoices.list(), api.settings.get(), api.orders.list('pending')])
@@ -58,14 +86,17 @@ export default function Dashboard() {
 
   // Metal-wise sales for the selected period. Line items don't store the
   // metal themselves, so it's looked up from the line's article.
-  const now = new Date();
-  const periodStart = salesPeriod === 'week'
-    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)) // Monday
-    : salesPeriod === 'month'
-      ? new Date(now.getFullYear(), now.getMonth(), 1)
-      : new Date(now.getFullYear(), 0, 1);
+  // The date boxes are always the source of truth (presets just fill them).
+  // The end date is inclusive, so the range runs to the next midnight.
+  const periodStart = salesFrom ? parseLocalDate(salesFrom) : null;
+  let periodEnd = null;
+  if (salesTo) { periodEnd = parseLocalDate(salesTo); periodEnd.setDate(periodEnd.getDate() + 1); }
   const metalByArticleId = Object.fromEntries(articles.map((a) => [a.id, a.metal]));
-  const periodInvoices = invoices.filter((inv) => inv.status !== 'cancelled' && new Date(inv.invoice_date) >= periodStart);
+  const periodInvoices = invoices.filter((inv) => {
+    if (inv.status === 'cancelled') return false;
+    const d = new Date(inv.invoice_date);
+    return (!periodStart || d >= periodStart) && (!periodEnd || d < periodEnd);
+  });
   const metalSalesGroups = periodInvoices.reduce((groups, inv) => {
     for (const it of inv.items || []) {
       const metal = metalByArticleId[it.article_id] || 'Other';
@@ -81,7 +112,20 @@ export default function Dashboard() {
     if (!metalSalesGroups[metal]) metalSalesGroups[metal] = { metal, amount: 0, weight: 0, pieces: 0 };
   }
   const metalSales = Object.values(metalSalesGroups).sort((a, b) => a.metal.localeCompare(b.metal));
-  const periodLabel = { week: 'this week', month: 'this month', year: 'this year' }[salesPeriod];
+  const oldExchanges = [
+    { metal: 'Gold', field: 'old_gold_exchange_value' },
+    { metal: 'Silver', field: 'old_silver_exchange_value' },
+  ].map(({ metal, field }) => {
+    const bills = periodInvoices.filter((inv) => (inv[field] || 0) > 0);
+    return { metal, bills: bills.length, amount: bills.reduce((sum, inv) => sum + inv[field], 0) };
+  });
+  const formatDay = (s) => parseLocalDate(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const periodLabel = salesPeriod !== 'custom'
+    ? { week: 'this week', month: 'this month', year: 'this year' }[salesPeriod]
+    : salesFrom && salesTo ? `${formatDay(salesFrom)} – ${formatDay(salesTo)}`
+      : salesFrom ? `since ${formatDay(salesFrom)}`
+        : salesTo ? `up to ${formatDay(salesTo)}`
+          : 'all time';
 
   return (
     <div>
@@ -133,13 +177,18 @@ export default function Dashboard() {
       )}
 
       <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
           <h3 style={{ margin: 0 }}>Sales by metal</h3>
           <div style={{ flex: 1 }} />
-          <select value={salesPeriod} onChange={(e) => setSalesPeriod(e.target.value)} style={{ width: 'auto' }}>
+          <span className="hint" style={{ margin: 0 }}>Start date</span>
+          <input type="date" value={salesFrom} max={salesTo || undefined} onChange={(e) => { setSalesFrom(e.target.value); setSalesPeriod('custom'); }} style={{ width: 'auto' }} aria-label="Start date" />
+          <span className="hint" style={{ margin: 0 }}>End date</span>
+          <input type="date" value={salesTo} min={salesFrom || undefined} onChange={(e) => { setSalesTo(e.target.value); setSalesPeriod('custom'); }} style={{ width: 'auto' }} aria-label="End date" />
+          <select value={salesPeriod} onChange={(e) => choosePeriod(e.target.value)} style={{ width: 'auto' }}>
             <option value="week">This week</option>
             <option value="month">This month</option>
             <option value="year">This year</option>
+            <option value="custom">Custom dates</option>
           </select>
         </div>
         <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.min(metalSales.length, 4)}, 1fr)` }}>
@@ -152,6 +201,17 @@ export default function Dashboard() {
           ))}
         </div>
         <p className="hint">Item totals incl. GST from {periodInvoices.length} non-cancelled bill{periodInvoices.length === 1 ? '' : 's'}, before bill-level discount and old gold/silver exchange.</p>
+
+        <h3 style={{ marginTop: 18 }}>Old metal exchange received</h3>
+        <div className="grid cols-2">
+          {oldExchanges.map((x) => (
+            <div className="card stat" key={x.metal} style={{ marginBottom: 0 }}>
+              <div className="value">₹{x.amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+              <div className="label">Old {x.metal.toLowerCase()} exchange {periodLabel}</div>
+              <div className="hint">From {x.bills} bill{x.bills === 1 ? '' : 's'}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid cols-2">

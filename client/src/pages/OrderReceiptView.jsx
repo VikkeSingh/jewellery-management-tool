@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import LogoLJ from '../components/LogoLJ.jsx';
+import { usePaperSize, PaperSizeSelect, PaperSizeStyle } from '../components/PaperSize.jsx';
 
 export default function OrderReceiptView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paperId, setPaperId] = usePaperSize();
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [paymentError, setPaymentError] = useState('');
@@ -67,8 +69,10 @@ export default function OrderReceiptView() {
             <button className="secondary" onClick={() => navigate(`/orders/${id}/complete`)}>Complete Order</button>
           </>
         )}
+        <PaperSizeSelect value={paperId} onChange={setPaperId} />
         <button onClick={() => window.print()}>Print / Save PDF</button>
       </div>
+      <PaperSizeStyle paperId={paperId} />
 
       {showPaymentForm && (
         <div className="card no-print" style={{ maxWidth: 800, margin: '0 auto 14px' }}>

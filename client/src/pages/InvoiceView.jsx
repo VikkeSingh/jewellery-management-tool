@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import LogoLJ from '../components/LogoLJ.jsx';
+import { usePaperSize, PaperSizeSelect, PaperSizeStyle } from '../components/PaperSize.jsx';
 
 function makingPercent(it) {
   if (!it.metal_value) return '—';
@@ -26,6 +27,7 @@ export default function InvoiceView() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentError, setPaymentError] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
+  const [paperId, setPaperId] = usePaperSize();
 
   function load() {
     api.invoices.get(id).then(setData);
@@ -99,8 +101,10 @@ export default function InvoiceView() {
           <button className="secondary" onClick={() => setShowPaymentForm((v) => !v)}>Record Payment</button>
         )}
         {!isCancelled && <button className="danger" onClick={cancelInvoice}>Cancel Invoice</button>}
+        <PaperSizeSelect value={paperId} onChange={setPaperId} />
         <button onClick={() => window.print()}>Print / Save PDF</button>
       </div>
+      <PaperSizeStyle paperId={paperId} />
 
       {showPaymentForm && (
         <div className="card no-print" style={{ maxWidth: 800, margin: '0 auto 14px' }}>

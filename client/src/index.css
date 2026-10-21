@@ -216,6 +216,7 @@ tr:hover td { background: #faf6ea; }
 .invoice-signature { margin: 28px 0 0 auto; width: 220px; text-align: center; font-size: 13px; break-inside: avoid; }
 .invoice-signature .stamp-space { height: 80px; }
 .invoice-signature .sign-line { border-top: 1px solid var(--ink); padding-top: 5px; font-weight: 600; }
+.software-provider { text-align: right; font-family: 'Roboto', system-ui, sans-serif; font-weight: 600; }
 .print-actions { max-width: 800px; margin: 0 auto 14px; display: flex; gap: 10px; justify-content: flex-end; }
 
 @media print {

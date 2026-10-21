@@ -255,7 +255,7 @@ export default function InvoiceView() {
         <div className="invoice-footer-note">
           {settings.invoice_footer}<br />
           {isEstimate ? 'This is an estimate only, not a GST tax invoice.' : 'This is a computer-generated GST tax invoice.'}
-          {isEstimate && <><br />Software Provider: 8287612427</>}
+          {isEstimate && <div className="software-provider">Software Provider : BuildCraftTechs : 8287612427</div>}
         </div>
       </div>
     </div>
